@@ -1,38 +1,35 @@
-
-
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Ensure folder exists or create it
-const ensureDir = (dirPath) => {
+// Ensure directory exists
+const ensureDirExists = (dirPath) => {
   if (!fs.existsSync(dirPath)) {
     fs.mkdirSync(dirPath, { recursive: true });
   }
 };
 
-// Full absolute paths
-const catImgsPath = path.resolve(__dirname, '../uploads/catImgs/');
-const prodImgsPath = path.resolve(__dirname, '../uploads/productImgs/');
+// Absolute upload directories
+const catDir = path.join(__dirname, '..', 'uploads', 'catImgs');
+const prodDir = path.join(__dirname, '..', 'uploads', 'productImgs');
 
-// Ensure folders exist
-ensureDir(catImgsPath);
-ensureDir(prodImgsPath);
+ensureDirExists(catDir);
+ensureDirExists(prodDir);
 
-// Storage for category images
+// Category Image Storage
 const catStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, catImgsPath);
+    cb(null, catDir);
   },
   filename: (req, file, cb) => {
     cb(null, `cat_${Date.now()}${path.extname(file.originalname)}`);
   },
 });
 
-// Storage for product images
+// Product Image Storage
 const prodStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, prodImgsPath);
+    cb(null, prodDir);
   },
   filename: (req, file, cb) => {
     cb(null, `prod_${Date.now()}${path.extname(file.originalname)}`);
