@@ -32,5 +32,6 @@ const catStorage = multer.diskStorage({
 const storage = multer.memoryStorage();
 
 const uploadCat = multer({ storage });
+const uploadProduct = multer({storage});
 
-module.exports = { uploadCat };
+module.exports = { uploadCat,uploadProduct };

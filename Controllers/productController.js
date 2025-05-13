@@ -17,12 +17,21 @@ exports.createProduct = async (req, res) => {
       modelNumbers,
       dimensions,
       colors,
-      images, // base64 image strings
       price,
-      discount,
+      discount
     } = req.body;
 
-    if (!images || !Array.isArray(images) || images.length === 0) {
+    // Parse arrays from form-data text inputs
+    const parsedModelNumbers = JSON.parse(modelNumbers || '[]');
+    const parsedDimensions = JSON.parse(dimensions || '[]');
+    const parsedColors = JSON.parse(colors || '[]');
+
+    // Convert uploaded image buffers to base64
+    const images = (req.files || []).map(file => {
+      return `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+    });
+
+    if (images.length === 0) {
       return res.status(400).json({ message: 'At least one image is required' });
     }
 
@@ -33,10 +42,10 @@ exports.createProduct = async (req, res) => {
       categoryId,
       name,
       description,
-      modelNumbers: JSON.parse(modelNumbers || '[]'),
-      dimensions: JSON.parse(dimensions || '[]'),
-      colors: JSON.parse(colors || '[]'),
-      images, // Already base64
+      modelNumbers: parsedModelNumbers,
+      dimensions: parsedDimensions,
+      colors: parsedColors,
+      images,
       price,
       discount
     });
