@@ -50,14 +50,22 @@ exports.getCategories = async (req, res) => {
   try {
     const categories = await Category.find();
 
-    const updated = categories.map(cat => ({
-      categoryId: cat.categoryId,
-      name: cat.name,
-      image: {
-        contentType: cat.image.contentType,
-        data: cat.image.data.toString('base64'),
-      },
-    }));
+    const updated = categories.map(cat => {
+      const base64Image = cat.image?.data
+        ? cat.image.data.toString('base64')
+        : null;
+
+      return {
+        categoryId: cat.categoryId,
+        name: cat.name,
+        image: base64Image
+          ? {
+              contentType: cat.image.contentType,
+              data: base64Image,
+            }
+          : null,
+      };
+    });
 
     res.json(updated);
   } catch (error) {
