@@ -7,6 +7,6 @@ const { uploadProduct } = require('../middleware/upload');//no s
 router.post('/add-product', uploadProduct.array('images'), productController.createProduct);
 
 router.patch('/toggle-product/:productId', productController.toggleAvailability);
-router.get('/products', productController.getProducts);
+router.get('/get-products', productController.getProducts);
 
 module.exports = router;
