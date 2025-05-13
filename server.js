@@ -24,7 +24,8 @@ connectDB();
     fs.mkdirSync(dir, { recursive: true });
   }
 });
-app.use('/uploads', express.static('uploads'));
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use('/api/auth', authRoutes);
