@@ -26,7 +26,7 @@ const catStorage = multer.diskStorage({
   },
 });
 
-const multer = require('multer');
+
 
 // Use memory storage for saving image in MongoDB
 const storage = multer.memoryStorage();
