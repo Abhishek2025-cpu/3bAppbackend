@@ -1,18 +1,10 @@
-// File: routes/productRoutes.js
-
 const express = require('express');
 const router = express.Router();
-
-// ✅ Import the entire controller correctly
 const productController = require('../Controllers/productController');
 
-// ✅ Multer middleware for product image uploads
-const { uploadProd } = require('../middleware/upload');
-
-// ✅ POST route to add a product with up to 5 images (stored in uploads/productImgs)
-router.post('/add-product', uploadProd.array('images', 5), productController.createProduct);
-
-// ✅ PATCH route to toggle availability of a product by productId
+// Accept JSON body directly with base64 images
+router.post('/add-product', productController.createProduct);
 router.patch('/toggle-product/:productId', productController.toggleAvailability);
+router.get('/products', productController.getProducts);
 
 module.exports = router;

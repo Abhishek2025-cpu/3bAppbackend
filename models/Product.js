@@ -7,7 +7,7 @@ const productSchema = new mongoose.Schema({
   description: { type: String },
   modelNumbers: [String],
   dimensions: [String],
-  images: [String],
+  images: [String], // Now will hold base64 strings
   colors: [String],
   price: { type: Number, required: true },
   discount: { type: Number, default: 0 },
