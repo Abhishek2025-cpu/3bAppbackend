@@ -26,17 +26,11 @@ const catStorage = multer.diskStorage({
   },
 });
 
-// Product Image Storage
-const prodStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, prodDir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, `prod_${Date.now()}${path.extname(file.originalname)}`);
-  },
-});
+const multer = require('multer');
 
-const uploadCat = multer({ storage: catStorage });
-const uploadProd = multer({ storage: prodStorage });
+// Use memory storage for saving image in MongoDB
+const storage = multer.memoryStorage();
 
-module.exports = { uploadCat, uploadProd };
+const uploadCat = multer({ storage });
+
+module.exports = { uploadCat };

@@ -11,25 +11,56 @@ async function generateCategoryId() {
 exports.createCategory = async (req, res) => {
   try {
     const { name } = req.body;
-    const image = req.file ? req.file.filename : null;
+    const file = req.file;
 
-    console.log('Image received:', image);  // Log the received image filename
-
-    if (!name || !image) {
+    if (!name || !file) {
       return res.status(400).json({ message: 'Name and image are required' });
     }
 
     const categoryId = await generateCategoryId();
-    const category = new Category({ categoryId, name, image });
 
-    console.log('Category to save:', category); // Log category data
+    const category = new Category({
+      categoryId,
+      name,
+      image: {
+        data: file.buffer,
+        contentType: file.mimetype,
+      },
+    });
 
     await category.save();
 
-    res.status(201).json({ message: 'Category created', category });
+    res.status(201).json({
+      message: 'Category created',
+      category: {
+        categoryId: category.categoryId,
+        name: category.name,
+        image: {
+          contentType: category.image.contentType,
+          data: category.image.data.toString('base64'), // for preview
+        },
+      },
+    });
   } catch (error) {
-    console.error('Error during category creation:', error); // Log error details
-    res.status(500).json({ message: 'Category creation failed', error: error.message });
+    res.status(500).json({ message: 'Error creating category', error: error.message });
   }
 };
 
+exports.getCategories = async (req, res) => {
+  try {
+    const categories = await Category.find();
+
+    const updated = categories.map(cat => ({
+      categoryId: cat.categoryId,
+      name: cat.name,
+      image: {
+        contentType: cat.image.contentType,
+        data: cat.image.data.toString('base64'),
+      },
+    }));
+
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to get categories', error: error.message });
+  }
+};
