@@ -5,6 +5,7 @@ const authRoutes = require('./routes/authRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const productRoutes = require('./routes/productRoutes');
 const path = require('path');
+const fs = require('fs');
 
 const cors = require('cors');
 dotenv.config();
@@ -17,7 +18,13 @@ app.use(express.json());
 // Connect to MongoDB
 connectDB();
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+['uploads/catImgs', 'uploads/productImgs'].forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+});
+app.use('/uploads', express.static('uploads'));
 
 // Routes
 app.use('/api/auth', authRoutes);
