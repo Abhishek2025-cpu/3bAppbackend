@@ -13,16 +13,23 @@ exports.createCategory = async (req, res) => {
     const { name } = req.body;
     const image = req.file ? req.file.filename : null;
 
+    console.log('Image received:', image);  // Log the received image filename
+
     if (!name || !image) {
       return res.status(400).json({ message: 'Name and image are required' });
     }
 
     const categoryId = await generateCategoryId();
     const category = new Category({ categoryId, name, image });
+
+    console.log('Category to save:', category); // Log category data
+
     await category.save();
 
     res.status(201).json({ message: 'Category created', category });
   } catch (error) {
+    console.error('Error during category creation:', error); // Log error details
     res.status(500).json({ message: 'Category creation failed', error: error.message });
   }
 };
+
