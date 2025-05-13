@@ -18,22 +18,20 @@ exports.createProduct = async (req, res) => {
       dimensions,
       colors,
       price,
-      discount
+      discount,
     } = req.body;
 
-    // Parse arrays from form-data text inputs
-    const parsedModelNumbers = JSON.parse(modelNumbers || '[]');
-    const parsedDimensions = JSON.parse(dimensions || '[]');
-    const parsedColors = JSON.parse(colors || '[]');
+    // Parse JSON fields
+    const modelNumbersArray = JSON.parse(modelNumbers || '[]');
+    const dimensionsArray = JSON.parse(dimensions || '[]');
+    const colorsArray = JSON.parse(colors || '[]');
 
-    // Convert uploaded image buffers to base64
-    const images = (req.files || []).map(file => {
-      return `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
-    });
-
-    if (images.length === 0) {
+    if (!req.files || req.files.length === 0) {
       return res.status(400).json({ message: 'At least one image is required' });
     }
+
+    // Convert uploaded files to base64
+    const images = req.files.map(file => file.buffer.toString('base64'));
 
     const productId = await generateProductId();
 
@@ -42,9 +40,9 @@ exports.createProduct = async (req, res) => {
       categoryId,
       name,
       description,
-      modelNumbers: parsedModelNumbers,
-      dimensions: parsedDimensions,
-      colors: parsedColors,
+      modelNumbers: modelNumbersArray,
+      dimensions: dimensionsArray,
+      colors: colorsArray,
       images,
       price,
       discount
@@ -57,6 +55,7 @@ exports.createProduct = async (req, res) => {
     res.status(500).json({ message: 'Product creation failed', error: error.message });
   }
 };
+
 
 exports.toggleAvailability = async (req, res) => {
   try {
