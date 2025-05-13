@@ -16,7 +16,14 @@ exports.signup = async (req, res) => {
       return res.status(400).json({ message: 'User already exists with this email or number' });
     }
 
-    const newUser = new User({ name, number, email, address });
+    const newUser = new User({
+      name,
+      number,
+      email,
+      address,
+      role: 'client' // 👈 default role set here
+    });
+
     await newUser.save();
 
     res.status(201).json({ message: 'User registered successfully', user: newUser });
@@ -24,6 +31,7 @@ exports.signup = async (req, res) => {
     res.status(500).json({ message: 'Signup failed', error: error.message });
   }
 };
+
 
 // POST /login
 exports.login = async (req, res) => {
