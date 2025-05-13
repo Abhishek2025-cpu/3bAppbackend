@@ -4,6 +4,6 @@ const categoryController = require('../Controllers/categoryController');
 const { uploadCat } = require('../middleware/upload');
 
 router.post('/add-category', uploadCat.single('image'), categoryController.createCategory);
-router.get('/categories', categoryController.getCategories);
+router.get('/get-categories', categoryController.getCategories);
 
 module.exports = router;
