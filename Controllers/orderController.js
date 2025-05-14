@@ -12,11 +12,11 @@ exports.placeOrder = async (req, res) => {
   try {
     const { userId, productId, shippingAddresses } = req.body;
 
-    // Check if user exists
+    // Check user existence
     const user = await User.findById(userId);
     if (!user) return res.status(400).json({ success: false, message: 'User not found. Please register.' });
 
-    // Check if product exists
+    // Check product existence
     const product = await Product.findById(productId);
     if (!product) return res.status(400).json({ success: false, message: 'Product not found.' });
 
@@ -34,9 +34,24 @@ exports.placeOrder = async (req, res) => {
       shippingAddresses,
     });
 
-    await newOrder.save();
+    const savedOrder = await newOrder.save();
 
-    res.status(201).json({ success: true, message: 'Order placed successfully.', orderId });
+    // Populate user and product data
+    const populatedOrder = await Order.findById(savedOrder._id)
+      .populate('userId', 'name email') // Only return name and email of user
+      .populate('productId', 'name price'); // Only return name and price of product
+
+    res.status(201).json({
+      success: true,
+      message: 'Order placed successfully.',
+      orderDetails: {
+        orderId: populatedOrder.orderId,
+        user: populatedOrder.userId,
+        product: populatedOrder.productId,
+        shippingAddresses: populatedOrder.shippingAddresses,
+        createdAt: populatedOrder.createdAt,
+      }
+    });
   } catch (error) {
     console.error('Order placement failed:', error);
     res.status(500).json({ success: false, message: 'Server error placing order.' });
