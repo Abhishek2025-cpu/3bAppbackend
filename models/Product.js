@@ -7,9 +7,9 @@ const productSchema = new mongoose.Schema({
   description: { type: String },
   modelNumbers: [String],
   dimensions: [String],
-  images: [String], // Now will hold base64 strings
+  images: [String], // base64 images
   colors: [String],
-  price: { type: Number, required: true },
+  price: { type: [Number], required: true }, // ✅ array: [original, discounted]
   discount: { type: Number, default: 0 },
   available: { type: Boolean, default: true }
 }, { timestamps: true });

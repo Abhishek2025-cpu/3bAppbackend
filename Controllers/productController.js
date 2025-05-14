@@ -7,7 +7,6 @@ async function generateProductId() {
   const lastNum = parseInt(last.productId.replace('PROD', '')) + 1;
   return `PROD${String(lastNum).padStart(3, '0')}`;
 }
-
 exports.createProduct = async (req, res) => {
   try {
     const {
@@ -21,7 +20,6 @@ exports.createProduct = async (req, res) => {
       discount,
     } = req.body;
 
-    // Parse JSON fields
     const modelNumbersArray = JSON.parse(modelNumbers || '[]');
     const dimensionsArray = JSON.parse(dimensions || '[]');
     const colorsArray = JSON.parse(colors || '[]');
@@ -30,10 +28,13 @@ exports.createProduct = async (req, res) => {
       return res.status(400).json({ message: 'At least one image is required' });
     }
 
-    // Convert uploaded files to base64
     const images = req.files.map(file => file.buffer.toString('base64'));
 
     const productId = await generateProductId();
+
+    const originalPrice = parseFloat(price);
+    const discountPercent = parseFloat(discount || 0);
+    const discountedPrice = Math.round(originalPrice - (originalPrice * (discountPercent / 100)));
 
     const product = new Product({
       productId,
@@ -44,8 +45,8 @@ exports.createProduct = async (req, res) => {
       dimensions: dimensionsArray,
       colors: colorsArray,
       images,
-      price,
-      discount
+      price: [originalPrice, discountedPrice], // ✅ save both prices
+      discount: discountPercent
     });
 
     await product.save();
@@ -55,7 +56,6 @@ exports.createProduct = async (req, res) => {
     res.status(500).json({ message: 'Product creation failed', error: error.message });
   }
 };
-
 
 exports.toggleAvailability = async (req, res) => {
   try {
