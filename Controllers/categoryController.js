@@ -51,6 +51,7 @@ exports.getCategories = async (req, res) => {
       return {
         categoryId: cat.categoryId,
         name: cat.name,
+        position: cat.position ?? null, // ✅ Add this line to include position
         image: base64Image
           ? {
               contentType: cat.image.contentType,
@@ -60,8 +61,9 @@ exports.getCategories = async (req, res) => {
       };
     });
 
-    res.json(updated);
+    res.status(200).json(updated); // Send updated array
   } catch (error) {
-    res.status(500).json({ message: 'Failed to get categories', error: error.message });
+    res.status(500).json({ message: 'Failed to fetch categories', error: error.message });
   }
 };
+
