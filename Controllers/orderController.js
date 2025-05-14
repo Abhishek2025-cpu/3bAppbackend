@@ -77,3 +77,31 @@ exports.getOrders = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error fetching orders.' });
   }
 };
+
+
+// controllers/orderController.js
+
+exports.getOrdersByUserId = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const orders = await Order.find({ userId })
+      .sort({ createdAt: -1 })
+      .populate('userId', 'name email phone')
+      .populate('productId', 'name price dimensions discount');
+
+    if (!orders.length) {
+      return res.status(404).json({ success: false, message: 'No orders found for this user.' });
+    }
+
+    res.status(200).json({
+      success: true,
+      count: orders.length,
+      orders
+    });
+  } catch (error) {
+    console.error('Error fetching user orders:', error);
+    res.status(500).json({ success: false, message: 'Server error fetching user orders.' });
+  }
+};
+
