@@ -10,7 +10,7 @@ const fs = require('fs');
 const cors = require('cors');
 dotenv.config();
 const app = express();
-const multer = require('multer');
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -19,13 +19,7 @@ app.use(express.json());
 connectDB();
 
 
-['uploads/catImgs', 'uploads/productImgs'].forEach(dir => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-});
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use('/api/auth', authRoutes);

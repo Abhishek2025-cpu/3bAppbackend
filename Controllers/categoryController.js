@@ -10,12 +10,14 @@ async function generateCategoryId() {
 
 exports.createCategory = async (req, res) => {
   try {
-    const { name } = req.body;
-    const file = req.file;
+    const { name, position } = req.body;
 
-    if (!name || !file) {
-      return res.status(400).json({ message: 'Name and image are required' });
+    if (!req.file) {
+      return res.status(400).json({ message: 'Image is required' });
     }
+
+    const imageBuffer = req.file.buffer;
+    const contentType = req.file.mimetype;
 
     const categoryId = await generateCategoryId();
 
@@ -23,26 +25,17 @@ exports.createCategory = async (req, res) => {
       categoryId,
       name,
       image: {
-        data: file.buffer,
-        contentType: file.mimetype,
+        data: imageBuffer,
+        contentType,
       },
+      position: position !== undefined ? Number(position) : null
     });
 
     await category.save();
+    res.status(201).json({ message: 'Category created', category });
 
-    res.status(201).json({
-      message: 'Category created',
-      category: {
-        categoryId: category.categoryId,
-        name: category.name,
-        image: {
-          contentType: category.image.contentType,
-          data: category.image.data.toString('base64'), // for preview
-        },
-      },
-    });
   } catch (error) {
-    res.status(500).json({ message: 'Error creating category', error: error.message });
+    res.status(500).json({ message: 'Category creation failed', error: error.message });
   }
 };
 
