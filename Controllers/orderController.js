@@ -57,3 +57,23 @@ exports.placeOrder = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error placing order.' });
   }
 };
+
+
+
+exports.getOrders = async (req, res) => {
+  try {
+    const orders = await Order.find()
+      .sort({ createdAt: -1 }) // latest orders first
+      .populate('userId', 'name email phone')
+      .populate('productId', 'name price dimensions discount');
+
+    res.status(200).json({
+      success: true,
+      count: orders.length,
+      orders
+    });
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+    res.status(500).json({ success: false, message: 'Server error fetching orders.' });
+  }
+};
