@@ -116,7 +116,7 @@ exports.getOrdersByUserId = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching user orders:', error);
-    res.status(500).json({ success: false, message: 'Server error fetching user orders.' });
+    res.status(500).json({ success: false, message: 'Server error fetching user orders.',error: error.message });
   }
 };
 
