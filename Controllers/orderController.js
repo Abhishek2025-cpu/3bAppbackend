@@ -3,12 +3,10 @@ const Order = require('../models/Order');
 const User = require('../models/User');
 const Product = require('../models/Product');
 
-const generateOrderId = (userId, productId) => {
-  const timePart = Date.now().toString().slice(-6); // last 6 digits of timestamp
-  const shortUser = userId.toString().slice(-4);
-  const shortProd = productId.toString().slice(-4);
-  return `ORD#-${shortUser}-${shortProd}-${timePart}`;
+const generateOrderId = () => {
+  return '#3b' + Math.floor(Math.random() * 10000000000).toString().padStart(10, '0');
 };
+
 
 exports.placeOrder = async (req, res) => {
   try {
