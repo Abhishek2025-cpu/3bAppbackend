@@ -7,7 +7,6 @@ const generateOrderId = () => {
   return '#3b' + Math.floor(Math.random() * 10000000000).toString().padStart(10, '0');
 };
 
-
 exports.placeOrder = async (req, res) => {
   try {
     const { userId, items, shippingAddresses } = req.body;
@@ -31,12 +30,15 @@ exports.placeOrder = async (req, res) => {
         return res.status(400).json({ success: false, message: `Product with ID ${item.productId} not found.` });
       }
 
+      // Normalize price to a number (handle unexpected arrays)
+      const price = Array.isArray(product.price) ? product.price[0] : product.price;
+
       // Push product info with individual orderId
       products.push({
         productId: item.productId,
         orderId: generateOrderId(),
         quantity: item.quantity,
-        priceAtPurchase: product.price // capture price at time of order
+        priceAtPurchase: price
       });
     }
 
@@ -68,6 +70,7 @@ exports.placeOrder = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error placing order.', error: error.message });
   }
 };
+
 
 
 
