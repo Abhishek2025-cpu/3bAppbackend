@@ -4,73 +4,48 @@ const User = require('../models/User');
 const Product = require('../models/Product');
 
 const generateOrderId = () => {
-  return '#3b' + Math.floor(Math.random() * 10000000000).toString().padStart(10, '0');
+  const prefix = '#3b';
+  const random = Math.floor(100000000000 + Math.random() * 900000000000); // 12 digits
+  return `${prefix}${random}`;
 };
 
 exports.placeOrder = async (req, res) => {
   try {
     const { userId, items, shippingAddresses } = req.body;
 
-    // Validate user
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(400).json({ success: false, message: 'User not found. Please register.' });
-    }
-
-    // Validate items
-    if (!Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ success: false, message: 'No products provided.' });
-    }
-
-    const products = [];
-
-    for (const item of items) {
-      const product = await Product.findById(item.productId);
-      if (!product) {
-        return res.status(400).json({ success: false, message: `Product with ID ${item.productId} not found.` });
-      }
-
-      // Normalize price to a number (handle unexpected arrays)
-      const price = Array.isArray(product.price) ? product.price[0] : product.price;
-
-      // Push product info with individual orderId
-      products.push({
-        productId: item.productId,
-        orderId: generateOrderId(),
-        quantity: item.quantity,
-        priceAtPurchase: price
-      });
-    }
-
-    if (!Array.isArray(shippingAddresses) || shippingAddresses.length === 0) {
-      return res.status(400).json({ success: false, message: 'At least one shipping address is required.' });
-    }
+    const products = await Promise.all(
+      items.map(async item => {
+        const product = await Product.findById(item.productId);
+        return {
+          productId: product._id,
+          quantity: item.quantity,
+          priceAtPurchase: product.price[0], // or handle array/index properly
+          orderId: generateOrderId()
+        };
+      })
+    );
 
     const newOrder = new Order({
       userId,
       products,
       shippingDetails: shippingAddresses,
-      tracking: [{ status: 'Pending' }],
-      currentStatus: 'Pending'
+      orderId: generateOrderId(), // ensure this is not null and unique
+      currentStatus: "Pending",
+      tracking: [{
+        status: "Pending",
+        updatedAt: new Date()
+      }]
     });
 
-    const savedOrder = await newOrder.save();
+    await newOrder.save();
 
-    const populatedOrder = await Order.findById(savedOrder._id)
-      .populate('userId', 'name email phone')
-      .populate('products.productId', 'name price');
+    res.status(201).json({ success: true, message: "Order placed successfully", order: newOrder });
 
-    res.status(201).json({
-      success: true,
-      message: 'Order placed successfully.',
-      order: populatedOrder
-    });
   } catch (error) {
-    console.error('Order placement failed:', error);
+    console.error('Error placing order:', error);
     res.status(500).json({ success: false, message: 'Server error placing order.', error: error.message });
   }
 };
-
 
 
 
