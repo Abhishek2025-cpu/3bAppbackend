@@ -23,12 +23,13 @@ const shippingSchema = new mongoose.Schema({
 
 const orderSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
-  orderId: { type: String, unique: true },
+  productIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }], // updated
+  orderId: { type: String }, // removed 'unique: true'
   shippingDetails: [shippingSchema],
   tracking: [trackingSchema],
   currentStatus: { type: String, default: 'Pending' },
   createdAt: { type: Date, default: Date.now }
 });
+
 
 module.exports = mongoose.model('Order', orderSchema);
