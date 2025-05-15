@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const trackingSchema = new mongoose.Schema({
-   status: {
+  status: {
     type: String,
     enum: ['Pending', 'Confirmed', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'],
     default: 'Pending'
@@ -18,26 +18,32 @@ const shippingSchema = new mongoose.Schema({
   address: String,
   country: { type: String, default: null },
   landmark: { type: String, default: null },
-  addressType: { type: String, enum: ['Home', 'Work', 'Custom'], default: 'Home' }
+  addressType: {
+    type: String,
+    enum: ['Home', 'Work', 'Custom'],
+    default: 'Home'
+  }
 });
 
 const orderedProductSchema = new mongoose.Schema({
   productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
   orderId: { type: String, required: true }, // unique per product
   quantity: { type: Number, required: true },
-  priceAtPurchase: { type: Number, required: true }
+  priceAtPurchase: { type: Number, required: true },
+  currentStatus: {
+    type: String,
+    enum: ['Pending', 'Confirmed', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'],
+    default: 'Pending'
+  },
+  tracking: [trackingSchema]
 });
 
 const orderSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   products: [orderedProductSchema],
-  orderId: { type: String }, // removed 'unique: true'
+  orderId: { type: String }, // shared parent order ID if needed
   shippingDetails: [shippingSchema],
-  tracking: [trackingSchema],
-
-  currentStatus: { type: String, default: 'Pending' },
   createdAt: { type: Date, default: Date.now }
 });
-
 
 module.exports = mongoose.model('Order', orderSchema);

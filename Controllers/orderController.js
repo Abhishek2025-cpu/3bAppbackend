@@ -96,45 +96,48 @@ exports.getOrdersByUserId = async (req, res) => {
 };
 
 
-exports.updateOrderStatus = async (req, res) => {
+exports.updateProductOrderStatus = async (req, res) => {
   const { orderId, newStatus } = req.body;
 
-  // Validate input
   if (!orderId || !newStatus) {
     return res.status(400).json({ success: false, message: 'orderId and newStatus are required.' });
   }
 
   const validStatuses = ['Pending', 'Confirmed', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'];
-
   if (!validStatuses.includes(newStatus)) {
     return res.status(400).json({ success: false, message: 'Invalid status provided.' });
   }
 
   try {
-    const order = await Order.findOne({ orderId });
+    // Find the order that contains the product with the given orderId
+    const order = await Order.findOne({ 'products.orderId': orderId });
 
     if (!order) {
-      return res.status(404).json({ success: false, message: 'Order not found.' });
+      return res.status(404).json({ success: false, message: 'Product with this orderId not found in any order.' });
     }
 
-    // Add new tracking entry
-    order.tracking.push({ status: newStatus, updatedAt: new Date() });
+    // Find the specific product
+    const product = order.products.find(p => p.orderId === orderId);
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found.' });
+    }
 
-    // Update currentStatus
-    order.currentStatus = newStatus;
+    // Update tracking and currentStatus
+    product.tracking.push({ status: newStatus, updatedAt: new Date() });
+    product.currentStatus = newStatus;
 
     await order.save();
 
     res.status(200).json({
       success: true,
-      message: 'Order status updated successfully.',
-      updatedStatus: newStatus,
-      trackingHistory: order.tracking,
-      currentStatus: order.currentStatus
+      message: 'Product order status updated successfully.',
+      orderId: product.orderId,
+      currentStatus: product.currentStatus,
+      trackingHistory: product.tracking
     });
   } catch (error) {
-    console.error('Error updating order status:', error);
-    res.status(500).json({ success: false, message: 'Server error updating order status.', error: error.message });
+    console.error('Error updating product order status:', error);
+    res.status(500).json({ success: false, message: 'Server error updating status.', error: error.message });
   }
 };
 
