@@ -96,3 +96,46 @@ exports.getOrdersByUserId = async (req, res) => {
 };
 
 
+exports.updateOrderStatus = async (req, res) => {
+  const { orderId, newStatus } = req.body;
+
+  // Validate input
+  if (!orderId || !newStatus) {
+    return res.status(400).json({ success: false, message: 'orderId and newStatus are required.' });
+  }
+
+  const validStatuses = ['Pending', 'Confirmed', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'];
+
+  if (!validStatuses.includes(newStatus)) {
+    return res.status(400).json({ success: false, message: 'Invalid status provided.' });
+  }
+
+  try {
+    const order = await Order.findOne({ orderId });
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found.' });
+    }
+
+    // Add new tracking entry
+    order.tracking.push({ status: newStatus, updatedAt: new Date() });
+
+    // Update currentStatus
+    order.currentStatus = newStatus;
+
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Order status updated successfully.',
+      updatedStatus: newStatus,
+      trackingHistory: order.tracking,
+      currentStatus: order.currentStatus
+    });
+  } catch (error) {
+    console.error('Error updating order status:', error);
+    res.status(500).json({ success: false, message: 'Server error updating order status.', error: error.message });
+  }
+};
+
+
