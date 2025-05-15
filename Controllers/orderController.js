@@ -3,65 +3,71 @@ const Order = require('../models/Order');
 const User = require('../models/User');
 const Product = require('../models/Product');
 
-const generateOrderId = () => {
-  const randomNum = Math.floor(100000000000 + Math.random() * 900000000000);
-  return '#3b' + randomNum.toString().slice(0, 10);
+const generateOrderId = (userId, productId) => {
+  const timePart = Date.now().toString().slice(-6); // last 6 digits of timestamp
+  const shortUser = userId.toString().slice(-4);
+  const shortProd = productId.toString().slice(-4);
+  return `ORD#-${shortUser}-${shortProd}-${timePart}`;
 };
 
 exports.placeOrder = async (req, res) => {
   try {
-    const { userId, productIds, shippingAddresses } = req.body;
+    const { userId, items, shippingAddresses } = req.body;
 
-    if (!Array.isArray(productIds) || productIds.length === 0) {
-      return res.status(400).json({ success: false, message: 'At least one product must be selected.' });
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, message: 'Product list is required.' });
     }
 
-    // Check user existence
     const user = await User.findById(userId);
-    if (!user) return res.status(400).json({ success: false, message: 'User not found. Please register.' });
+    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
 
-    // Check product existence
+    const productIds = items.map(i => i.productId);
     const products = await Product.find({ _id: { $in: productIds } });
+
     if (products.length !== productIds.length) {
-      return res.status(400).json({ success: false, message: 'One or more products not found.' });
+      return res.status(400).json({ success: false, message: 'Invalid product(s) found.' });
     }
 
-    // Validate shippingAddresses
-    if (!Array.isArray(shippingAddresses) || shippingAddresses.length === 0) {
-      return res.status(400).json({ success: false, message: 'At least one shipping address is required.' });
-    }
+    const orderedProducts = products.map(prod => {
+      const item = items.find(i => i.productId === prod._id.toString());
+      const quantity = item?.quantity || 1;
 
-    const orderId = generateOrderId();
+      return {
+        productId: prod._id,
+        orderId: generateOrderId(user._id, prod._id),
+        quantity,
+        priceAtPurchase: prod.price
+      };
+    });
 
     const newOrder = new Order({
-      orderId,
       userId,
-      productIds,
+      products: orderedProducts,
       shippingDetails: shippingAddresses,
       tracking: [{ status: 'Pending' }],
       currentStatus: 'Pending'
     });
 
-    const savedOrder = await newOrder.save();
+    const saved = await newOrder.save();
 
-    const populatedOrder = await Order.findById(savedOrder._id)
+    const populated = await Order.findById(saved._id)
       .populate('userId', 'name email')
-      .populate('productIds', 'name price');
+      .populate('products.productId', 'name price');
 
     res.status(201).json({
       success: true,
       message: 'Order placed successfully.',
-      orderDetails: {
-        orderId: populatedOrder.orderId,
-        user: populatedOrder.userId,
-        products: populatedOrder.productIds,
-        shippingAddresses: populatedOrder.shippingDetails,
-        tracking: populatedOrder.tracking,
-        createdAt: populatedOrder.createdAt
+      order: {
+        user: populated.userId,
+        products: populated.products,
+        shippingAddresses: populated.shippingDetails,
+        tracking: populated.tracking,
+        createdAt: populated.createdAt
       }
     });
-  } catch (error) {
-    console.error('Order placement failed:', error);
+
+  } catch (err) {
+    console.error('Order placement error:', err);
     res.status(500).json({ success: false, message: 'Server error placing order.' });
   }
 };

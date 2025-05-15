@@ -21,12 +21,20 @@ const shippingSchema = new mongoose.Schema({
   addressType: { type: String, enum: ['Home', 'Work', 'Custom'], default: 'Home' }
 });
 
+const orderedProductSchema = new mongoose.Schema({
+  productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+  orderId: { type: String, required: true }, // unique per product
+  quantity: { type: Number, required: true },
+  priceAtPurchase: { type: Number, required: true }
+});
+
 const orderSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  productIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }], // updated
+  products: [orderedProductSchema],
   orderId: { type: String }, // removed 'unique: true'
   shippingDetails: [shippingSchema],
   tracking: [trackingSchema],
+
   currentStatus: { type: String, default: 'Pending' },
   createdAt: { type: Date, default: Date.now }
 });
