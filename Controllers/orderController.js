@@ -14,60 +14,59 @@ exports.placeOrder = async (req, res) => {
   try {
     const { userId, items, shippingAddresses } = req.body;
 
-    if (!Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ success: false, message: 'Product list is required.' });
-    }
-
+    // Validate user
     const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
-
-    const productIds = items.map(i => i.productId);
-    const products = await Product.find({ _id: { $in: productIds } });
-
-    if (products.length !== productIds.length) {
-      return res.status(400).json({ success: false, message: 'Invalid product(s) found.' });
+    if (!user) {
+      return res.status(400).json({ success: false, message: 'User not found. Please register.' });
     }
 
-    const orderedProducts = products.map(prod => {
-      const item = items.find(i => i.productId === prod._id.toString());
-      const quantity = item?.quantity || 1;
+    // Validate items
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, message: 'No products provided.' });
+    }
 
-      return {
-        productId: prod._id,
-        orderId: generateOrderId(user._id, prod._id),
-        quantity,
-        priceAtPurchase: prod.price
-      };
-    });
+    const products = [];
+
+    for (const item of items) {
+      const product = await Product.findById(item.productId);
+      if (!product) {
+        return res.status(400).json({ success: false, message: `Product with ID ${item.productId} not found.` });
+      }
+
+      // Push product info with individual orderId
+      products.push({
+        productId: item.productId,
+        orderId: generateOrderId(),
+        quantity: item.quantity,
+        priceAtPurchase: product.price // capture price at time of order
+      });
+    }
+
+    if (!Array.isArray(shippingAddresses) || shippingAddresses.length === 0) {
+      return res.status(400).json({ success: false, message: 'At least one shipping address is required.' });
+    }
 
     const newOrder = new Order({
       userId,
-      products: orderedProducts,
+      products,
       shippingDetails: shippingAddresses,
       tracking: [{ status: 'Pending' }],
       currentStatus: 'Pending'
     });
 
-    const saved = await newOrder.save();
+    const savedOrder = await newOrder.save();
 
-    const populated = await Order.findById(saved._id)
-      .populate('userId', 'name email')
+    const populatedOrder = await Order.findById(savedOrder._id)
+      .populate('userId', 'name email phone')
       .populate('products.productId', 'name price');
 
     res.status(201).json({
       success: true,
       message: 'Order placed successfully.',
-      order: {
-        user: populated.userId,
-        products: populated.products,
-        shippingAddresses: populated.shippingDetails,
-        tracking: populated.tracking,
-        createdAt: populated.createdAt
-      }
+      order: populatedOrder
     });
-
-  } catch (err) {
-    console.error('Order placement error:', err);
+  } catch (error) {
+    console.error('Order placement failed:', error);
     res.status(500).json({ success: false, message: 'Server error placing order.' });
   }
 };
