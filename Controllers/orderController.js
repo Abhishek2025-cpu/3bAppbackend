@@ -103,7 +103,7 @@ exports.getOrdersByUserId = async (req, res) => {
     const orders = await Order.find({ userId })
       .sort({ createdAt: -1 })
       .populate('userId', 'name email phone')
-      .populate('productId', 'name price dimensions discount');
+      .populate('products.productId', 'name price dimensions discount');
 
     if (!orders.length) {
       return res.status(404).json({ success: false, message: 'No orders found for this user.' });
@@ -116,7 +116,8 @@ exports.getOrdersByUserId = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching user orders:', error);
-    res.status(500).json({ success: false, message: 'Server error fetching user orders.',error: error.message });
+    res.status(500).json({ success: false, message: 'Server error fetching user orders.', error: error.message });
   }
 };
+
 
