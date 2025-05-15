@@ -2,6 +2,7 @@
 const Order = require('../models/Order');
 const User = require('../models/User');
 const Product = require('../models/Product');
+const admin = require('../utils/fcm');
 
 const generateOrderId = () => {
   const prefix = '#3b';
@@ -141,4 +142,24 @@ exports.updateProductOrderStatus = async (req, res) => {
   }
 };
 
+// Send push notification
+const message = {
+  token: userFcmToken,
+  notification: {
+    title: 'Order Status Updated',
+    body: `Your order ${orderId} is now ${newStatus}`
+  },
+  data: {
+    orderId,
+    newStatus
+  }
+};
+
+admin.messaging().send(message)
+  .then(response => {
+    console.log('Push sent:', response);
+  })
+  .catch(err => {
+    console.error('FCM push error:', err.message);
+  });
 
