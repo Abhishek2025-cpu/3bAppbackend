@@ -74,13 +74,12 @@ exports.placeOrder = async (req, res) => {
 
 
 
-
 exports.getOrders = async (req, res) => {
   try {
     const orders = await Order.find()
       .sort({ createdAt: -1 }) // latest orders first
       .populate('userId', 'name email phone')
-      .populate('productId', 'name price dimensions discount');
+      .populate('products.productId', 'name price dimensions discount');
 
     res.status(200).json({
       success: true,
@@ -89,9 +88,10 @@ exports.getOrders = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching orders:', error);
-    res.status(500).json({ success: false, message: 'Server error fetching orders.' });
+    res.status(500).json({ success: false, message: 'Server error fetching orders.', error: error.message });
   }
 };
+
 
 
 // controllers/orderController.js
