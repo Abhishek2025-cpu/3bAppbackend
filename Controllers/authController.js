@@ -93,3 +93,13 @@ exports.login = async (req, res) => {
     res.status(500).json({ message: 'Login failed', error: error.message });
   }
 };
+
+
+exports.getUserProfiles = async (req, res) => {
+  try {
+    const users = await User.find().select('-__v -createdAt -updatedAt'); // optional: exclude metadata fields
+    res.status(200).json({ message: 'User profiles fetched successfully', users });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch user profiles', error: error.message });
+  }
+};
