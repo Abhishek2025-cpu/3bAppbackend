@@ -16,12 +16,20 @@ exports.signup = async (req, res) => {
       return res.status(400).json({ message: 'User already exists with this email or number' });
     }
 
+    let profileImage = null;
+    if (req.file) {
+      const base64 = req.file.buffer.toString('base64');
+      const mimeType = req.file.mimetype;
+      profileImage = `data:${mimeType};base64,${base64}`;
+    }
+
     const newUser = new User({
       name,
       number,
       email,
       address,
-      role: 'client' // 👈 default role set here
+      role: 'client',
+      profileImage
     });
 
     await newUser.save();
@@ -31,6 +39,38 @@ exports.signup = async (req, res) => {
     res.status(500).json({ message: 'Signup failed', error: error.message });
   }
 };
+s
+
+
+exports.updateUser = async (req, res) => {
+  const { userId } = req.params;
+  const { name, number, email, address } = req.body;
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Apply updates if present
+    if (name) user.name = name;
+    if (number) user.number = number;
+    if (email) user.email = email;
+    if (address) user.address = address;
+
+    if (req.file) {
+      const base64 = req.file.buffer.toString('base64');
+      const mimeType = req.file.mimetype;
+      user.profileImage = `data:${mimeType};base64,${base64}`;
+    }
+
+    await user.save();
+
+    res.status(200).json({ message: 'User updated successfully', user });
+  } catch (error) {
+    res.status(500).json({ message: 'Update failed', error: error.message });
+  }
+};
+
+
 
 
 // POST /login
