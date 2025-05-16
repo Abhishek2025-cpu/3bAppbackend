@@ -39,7 +39,7 @@ exports.signup = async (req, res) => {
     res.status(500).json({ message: 'Signup failed', error: error.message });
   }
 };
-s
+
 
 
 exports.updateUser = async (req, res) => {
