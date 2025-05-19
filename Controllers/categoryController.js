@@ -139,26 +139,16 @@ exports.toggleCategoryStock = async (req, res) => {
     let { id } = req.params;
     id = id.trim();
 
-    let category = null;
+    // Find category ONLY by categoryId field (not _id)
+    const category = await Category.findOne({ categoryId: id });
 
-    // Try finding by _id if it's a valid ObjectId
-    if (mongoose.Types.ObjectId.isValid(id)) {
-      category = await Category.findById(id);
-    }
-
-    // If not found, try by categoryId
     if (!category) {
-      category = await Category.findOne({ categoryId: id });
+      return res.status(404).json({ message: `Category with categoryId '${id}' not found` });
     }
 
-    // If still not found, return error
-    if (!category) {
-      return res.status(404).json({ message: `Category with ID or categoryId '${id}' not found` });
-    }
-
-    // Ensure inStock is boolean
+    // Toggle inStock boolean (default true if missing)
     if (typeof category.inStock !== 'boolean') {
-      category.inStock = true; // default if missing
+      category.inStock = true;
     } else {
       category.inStock = !category.inStock;
     }
