@@ -134,18 +134,27 @@ exports.deleteCategory = async (req, res) => {
 
 exports.toggleCategoryStock = async (req, res) => {
   try {
-    let { categoryId } = req.params;
-    categoryId = categoryId.trim(); // sanitize input
+    const { id } = req.params;
 
-    // Find category by categoryId (case-sensitive match)
-    const category = await Category.findOne({ categoryId: categoryId });
-
-    if (!category) {
-      return res.status(404).json({ message: `Category with ID '${categoryId}' not found` });
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid category ID format' });
     }
 
-    // Toggle the inStock value
-    category.inStock = !category.inStock;
+    // Find by _id
+    const category = await Category.findById(id);
+
+    if (!category) {
+      return res.status(404).json({ message: `Category with ID '${id}' not found` });
+    }
+
+    // Ensure inStock field exists
+    if (typeof category.inStock !== 'boolean') {
+      category.inStock = true; // default if not present
+    } else {
+      category.inStock = !category.inStock;
+    }
+
     await category.save();
 
     res.status(200).json({
@@ -157,3 +166,4 @@ exports.toggleCategoryStock = async (req, res) => {
     res.status(500).json({ message: 'Failed to toggle stock status', error: error.message });
   }
 };
+
