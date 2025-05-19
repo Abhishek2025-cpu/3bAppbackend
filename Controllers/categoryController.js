@@ -70,3 +70,63 @@ exports.getCategories = async (req, res) => {
   }
 };
 
+// ...existing code...
+
+// Update Category by categoryId
+exports.updateCategory = async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    const { name, position } = req.body;
+    let updateData = {};
+
+    if (name) updateData.name = name;
+    if (position !== undefined) updateData.position = Number(position);
+
+    // If images are uploaded, replace them
+    if (req.files && req.files.length > 0) {
+      updateData.images = req.files.map(file => ({
+        data: file.buffer,
+        contentType: file.mimetype,
+      }));
+    }
+
+    const updatedCategory = await Category.findOneAndUpdate(
+      { categoryId },
+      { $set: updateData },
+      { new: true }
+    );
+
+    if (!updatedCategory) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
+
+    res.status(200).json({
+      message: '✅ Category updated successfully',
+      category: {
+        ...updatedCategory.toObject(),
+        images: updatedCategory.images.map(img => ({
+          contentType: img.contentType,
+          data: img.data.toString('base64')
+        }))
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: '❌ Category update failed', error: error.message });
+  }
+};
+
+// Delete Category by categoryId
+exports.deleteCategory = async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    const deleted = await Category.findOneAndDelete({ categoryId });
+
+    if (!deleted) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
+
+    res.status(200).json({ message: '✅ Category deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: '❌ Category deletion failed', error: error.message });
+  }
+};
