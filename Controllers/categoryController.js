@@ -12,22 +12,23 @@ exports.createCategory = async (req, res) => {
   try {
     const { name, position } = req.body;
 
-    if (!req.file) {
-      return res.status(400).json({ message: 'Image is required' });
+    // Check for multiple files
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ message: 'At least one image is required' });
     }
 
-    const imageBuffer = req.file.buffer;
-    const contentType = req.file.mimetype;
+    // Map each file to an image object
+    const images = req.files.map(file => ({
+      data: file.buffer,
+      contentType: file.mimetype,
+    }));
 
     const categoryId = await generateCategoryId();
 
     const category = new Category({
       categoryId,
       name,
-      image: {
-        data: imageBuffer,
-        contentType,
-      },
+      images, // Store as array
       position: position !== undefined ? Number(position) : null
     });
 
