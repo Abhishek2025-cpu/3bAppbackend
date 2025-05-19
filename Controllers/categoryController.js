@@ -59,7 +59,7 @@ exports.getCategories = async (req, res) => {
       images: cat.images.map(img => ({
         contentType: img.contentType,
         data: img.data.toString('base64')
-      }))
+      }))  || []
     }));
 
     res.status(200).json(updated);
