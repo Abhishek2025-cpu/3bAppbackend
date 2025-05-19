@@ -134,11 +134,14 @@ exports.deleteCategory = async (req, res) => {
 
 exports.toggleCategoryStock = async (req, res) => {
   try {
-    const { categoryId } = req.params;
-    const category = await Category.findOne({ categoryId });
+    let { categoryId } = req.params;
+    categoryId = categoryId.trim(); // sanitize input
+
+    // Find category by categoryId (case-sensitive match)
+    const category = await Category.findOne({ categoryId: categoryId });
 
     if (!category) {
-      return res.status(404).json({ message: 'Category not found' });
+      return res.status(404).json({ message: `Category with ID '${categoryId}' not found` });
     }
 
     // Toggle the inStock value
@@ -150,6 +153,7 @@ exports.toggleCategoryStock = async (req, res) => {
       inStock: category.inStock
     });
   } catch (error) {
+    console.error('Toggle Error:', error.message);
     res.status(500).json({ message: 'Failed to toggle stock status', error: error.message });
   }
 };
