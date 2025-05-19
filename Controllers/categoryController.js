@@ -56,10 +56,12 @@ exports.getCategories = async (req, res) => {
       categoryId: cat.categoryId,
       name: cat.name,
       position: cat.position ?? null,
-      images: cat.images.map(img => ({
-        contentType: img.contentType,
-        data: img.data.toString('base64')
-      }))  || []
+      images: Array.isArray(cat.images)
+        ? cat.images.map(img => ({
+            contentType: img.contentType,
+            data: img.data.toString('base64')
+          }))
+        : []
     }));
 
     res.status(200).json(updated);
