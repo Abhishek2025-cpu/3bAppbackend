@@ -9,7 +9,7 @@ router.put('/update-categories/:categoryId', uploadCat.array('images'), category
 router.delete('/delete-categories/:categoryId', categoryController.deleteCategory);
 
 module.exports = router;
-const express = require('express');
+
 
 const categoryController = require('../Controllers/categoryController');
 const { uploadCat } = require('../middleware/upload');
