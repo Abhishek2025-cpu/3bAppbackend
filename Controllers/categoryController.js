@@ -12,12 +12,10 @@ exports.createCategory = async (req, res) => {
   try {
     const { name, position } = req.body;
 
-    // Check for multiple files
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ message: 'At least one image is required' });
     }
 
-    // Map each file to an image object
     const images = req.files.map(file => ({
       data: file.buffer,
       contentType: file.mimetype,
@@ -28,24 +26,25 @@ exports.createCategory = async (req, res) => {
     const category = new Category({
       categoryId,
       name,
-      images, // Store as array
+      images,
       position: position !== undefined ? Number(position) : null
     });
 
     await category.save();
+
     res.status(201).json({
-  message: 'Category created',
-  category: {
-    ...category.toObject(),
-    images: category.images.map(img => ({
-      contentType: img.contentType,
-      data: img.data.toString('base64')
-    }))
-  }
-});
+      message: '✅ Category created successfully',
+      category: {
+        ...category.toObject(),
+        images: category.images.map(img => ({
+          contentType: img.contentType,
+          data: img.data.toString('base64')
+        }))
+      }
+    });
 
   } catch (error) {
-    res.status(500).json({ message: 'Category creation failed', error: error.message });
+    res.status(500).json({ message: '❌ Category creation failed', error: error.message });
   }
 };
 
@@ -53,27 +52,19 @@ exports.getCategories = async (req, res) => {
   try {
     const categories = await Category.find();
 
-    const updated = categories.map(cat => {
-      const base64Image = cat.image?.data
-        ? cat.image.data.toString('base64')
-        : null;
+    const updated = categories.map(cat => ({
+      categoryId: cat.categoryId,
+      name: cat.name,
+      position: cat.position ?? null,
+      images: cat.images.map(img => ({
+        contentType: img.contentType,
+        data: img.data.toString('base64')
+      }))
+    }));
 
-      return {
-        categoryId: cat.categoryId,
-        name: cat.name,
-        position: cat.position ?? null, // ✅ Add this line to include position
-        image: base64Image
-          ? {
-              contentType: cat.image.contentType,
-              data: base64Image,
-            }
-          : null,
-      };
-    });
-
-    res.status(200).json(updated); // Send updated array
+    res.status(200).json(updated);
   } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch categories', error: error.message });
+    res.status(500).json({ message: '❌ Failed to fetch categories', error: error.message });
   }
 };
 
