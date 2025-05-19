@@ -33,7 +33,16 @@ exports.createCategory = async (req, res) => {
     });
 
     await category.save();
-    res.status(201).json({ message: 'Category created', category });
+    res.status(201).json({
+  message: 'Category created',
+  category: {
+    ...category.toObject(),
+    images: category.images.map(img => ({
+      contentType: img.contentType,
+      data: img.data.toString('base64')
+    }))
+  }
+});
 
   } catch (error) {
     res.status(500).json({ message: 'Category creation failed', error: error.message });
