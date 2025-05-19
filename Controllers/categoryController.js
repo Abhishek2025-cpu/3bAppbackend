@@ -130,3 +130,26 @@ exports.deleteCategory = async (req, res) => {
     res.status(500).json({ message: '❌ Category deletion failed', error: error.message });
   }
 };
+
+
+exports.toggleCategoryStock = async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    const category = await Category.findOne({ categoryId });
+
+    if (!category) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
+
+    // Toggle the inStock value
+    category.inStock = !category.inStock;
+    await category.save();
+
+    res.status(200).json({
+      message: `Category stock status updated to ${category.inStock ? 'In Stock' : 'Out of Stock'}`,
+      inStock: category.inStock
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to toggle stock status', error: error.message });
+  }
+};
