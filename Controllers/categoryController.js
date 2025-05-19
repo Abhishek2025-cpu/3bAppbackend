@@ -1,4 +1,5 @@
 const Category = require('../models/Category');
+const mongoose = require('mongoose');
 
 async function generateCategoryId() {
   const lastCat = await Category.findOne().sort({ createdAt: -1 });
