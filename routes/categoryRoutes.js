@@ -7,7 +7,7 @@ router.post('/add-category', uploadCat.array('image'), categoryController.create
 router.get('/get-categories', categoryController.getCategories);
 router.put('/update-categories/:categoryId', uploadCat.array('images'), categoryController.updateCategory);
 router.delete('/delete-categories/:categoryId', categoryController.deleteCategory);
-router.patch('/toggle-stock/:id', categoryController.toggleCategoryStock);
+router.put('/toggle-stock/:id', categoryController.toggleCategoryStock);
 
 module.exports = router;
 
