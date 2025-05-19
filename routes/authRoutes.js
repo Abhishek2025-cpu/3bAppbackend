@@ -9,5 +9,6 @@ router.post('/login', login);
 
 
 router.get('/get-user-profiles', getUserProfiles);
+router.get('/users/:userId', authController.getUserProfileById);
 
 module.exports = router;
