@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { signup, login,updateUser,getUserProfiles } = require('../Controllers/authController');
+const { signup, login,updateUser,getUserProfiles,getUserProfileById } = require('../Controllers/authController');
 const { uploadPrifle } = require('../middleware/upload');
 
 router.post('/signup', uploadPrifle.single('profileImage'), signup);
@@ -9,6 +9,6 @@ router.post('/login', login);
 
 
 router.get('/get-user-profiles', getUserProfiles);
-router.get('/users/:userId', authController.getUserProfileById);
+router.get('/users/:userId', getUserProfileById);
 
 module.exports = router;
