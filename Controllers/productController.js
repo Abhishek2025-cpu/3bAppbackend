@@ -102,6 +102,7 @@ exports.getProducts = async (req, res) => {
       dimensions: prod.dimensions,
       colors: prod.colors,
       price: prod.price,
+      discountedPrice: prod.discountedPrice,
       discount: prod.discount,
       available: prod.available,
       position: prod.position,
