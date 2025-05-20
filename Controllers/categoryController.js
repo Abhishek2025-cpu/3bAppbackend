@@ -62,7 +62,6 @@ exports.createCategory = async (req, res) => {
 };
 
 
-
 exports.getCategories = async (req, res) => {
   try {
     const categories = await Category.find();
@@ -73,8 +72,8 @@ exports.getCategories = async (req, res) => {
       position: cat.position ?? null,
       images: Array.isArray(cat.images)
         ? cat.images.map(img => ({
-            contentType: img.contentType,
-            data: img.data.toString('base64')
+            url: img.url,
+            public_id: img.public_id
           }))
         : []
     }));
@@ -85,24 +84,64 @@ exports.getCategories = async (req, res) => {
   }
 };
 
-// ...existing code...
 
 // Update Category by categoryId
+const cloudinary = require('cloudinary').v2;
+
+cloudinary.config({
+  cloud_name: 'your-cloud-name',
+  api_key: 'your-api-key',
+  api_secret: 'your-api-secret'
+});
+
 exports.updateCategory = async (req, res) => {
   try {
     const { categoryId } = req.params;
     const { name, position } = req.body;
-    let updateData = {};
 
+    const updateData = {};
     if (name) updateData.name = name;
     if (position !== undefined) updateData.position = Number(position);
 
-    // If images are uploaded, replace them
+    const existingCategory = await Category.findOne({ categoryId });
+
+    if (!existingCategory) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
+
+    // If new images are uploaded
     if (req.files && req.files.length > 0) {
-      updateData.images = req.files.map(file => ({
-        data: file.buffer,
-        contentType: file.mimetype,
-      }));
+      // Delete old images from Cloudinary
+      for (const img of existingCategory.images) {
+        if (img.public_id) {
+          await cloudinary.uploader.destroy(img.public_id);
+        }
+      }
+
+      // Upload new images to Cloudinary
+      const uploadedImages = await Promise.all(
+        req.files.map(file =>
+          cloudinary.uploader.upload_stream({
+            folder: 'categories',
+            resource_type: 'image'
+          }, (error, result) => {
+            if (error) throw error;
+            return {
+              url: result.secure_url,
+              public_id: result.public_id
+            };
+          })
+        ).map(streamUpload => {
+          return new Promise((resolve, reject) => {
+            const stream = streamUpload;
+            const bufferStream = require('streamifier').createReadStream(file.buffer);
+            stream.on('finish', () => resolve(stream));
+            bufferStream.pipe(stream);
+          });
+        })
+      );
+
+      updateData.images = uploadedImages;
     }
 
     const updatedCategory = await Category.findOneAndUpdate(
@@ -111,24 +150,22 @@ exports.updateCategory = async (req, res) => {
       { new: true }
     );
 
-    if (!updatedCategory) {
-      return res.status(404).json({ message: 'Category not found' });
-    }
-
     res.status(200).json({
       message: '✅ Category updated successfully',
       category: {
         ...updatedCategory.toObject(),
         images: updatedCategory.images.map(img => ({
-          contentType: img.contentType,
-          data: img.data.toString('base64')
+          url: img.url,
+          public_id: img.public_id
         }))
       }
     });
+
   } catch (error) {
     res.status(500).json({ message: '❌ Category update failed', error: error.message });
   }
 };
+
 
 // Delete Category by categoryId
 exports.deleteCategory = async (req, res) => {
