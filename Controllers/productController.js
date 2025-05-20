@@ -75,7 +75,7 @@ exports.getProducts = async (req, res) => {
     const products = await Product.find().sort({ position: 1 });
 
     const result = products.map(prod => ({
-      dbid: prod._id, // <-- Include the MongoDB _id field
+      _id: prod._id, // <-- Include the MongoDB _id field
       productId: prod.productId,
       categoryId: prod.categoryId,
       name: prod.name,
