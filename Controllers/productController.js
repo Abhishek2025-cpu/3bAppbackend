@@ -1,6 +1,5 @@
 const Product = require('../models/Product');
-const cloudinary = require('cloudinary').v2;
-const streamifier = require('streamifier');
+const cloudinary = require('cloudinary');
 
 // Create Product
 exports.createProduct = async (req, res) => {
