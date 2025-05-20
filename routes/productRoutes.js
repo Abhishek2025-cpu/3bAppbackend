@@ -1,12 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const productController = require('../Controllers/productController');
-const { uploadProduct } = require('../middleware/upload');//no s
+const productController = require('../controllers/productController');
+const { uploadProduct } = require('../middleware/upload'); // multer config
 
-// Updated to handle multipart/form-data and convert to base64
 router.post('/add-product', uploadProduct.array('images'), productController.createProduct);
-
-router.patch('/toggle-product/:productId', productController.toggleAvailability);
 router.get('/get-products', productController.getProducts);
+router.get('/get-product/:productId', productController.getProductById);
+router.put('/update-product/:productId', uploadProduct.array('images'), productController.updateProduct);
+router.put('/toggle-product/:productId', productController.toggleProductAvailability);
+
 
 module.exports = router;
+
