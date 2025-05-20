@@ -7,7 +7,7 @@ exports.createProduct = async (req, res) => {
   try {
     const {
       productId,
-      categoryId,
+      categoryId, // this is the string ID from request (e.g., CAT001)
       name,
       description,
       modelNumbers,
@@ -19,29 +19,29 @@ exports.createProduct = async (req, res) => {
       position
     } = req.body;
 
-    // Upload images to Cloudinary
-      const uploadedImages = await Promise.all(
-  req.files.map(file => {
-    return new Promise((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        { folder: 'products' },
-        (err, result) => {
-          if (err) return reject(err);
-          resolve({
-            url: result.secure_url,
-            public_id: result.public_id,
-          });
-        }
-      );
-      streamifier.createReadStream(file.buffer).pipe(stream);
-    });
-  })
-);
+    // 🔍 Find the category by its string ID
+    const category = await Category.findOne({ categoryId });
+    if (!category) return res.status(400).json({ success: false, message: 'Invalid categoryId provided' });
 
+    // 🖼️ Upload images
+    const uploadedImages = await Promise.all(
+      req.files.map(file =>
+        new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream({ folder: 'products' }, (err, result) => {
+            if (err) return reject(err);
+            resolve({
+              url: result.secure_url,
+              public_id: result.public_id,
+            });
+          });
+          stream.end(file.buffer);
+        })
+      )
+    );
 
     const newProduct = new Product({
       productId,
-      categoryId,
+      categoryId: category._id, // use ObjectId reference
       name,
       description,
       modelNumbers: modelNumbers ? modelNumbers.split(',') : [],
@@ -55,7 +55,13 @@ exports.createProduct = async (req, res) => {
     });
 
     await newProduct.save();
-    res.status(201).json({ success: true, message: '✅ Product created successfully', product: newProduct });
+
+    res.status(201).json({
+      success: true,
+      message: '✅ Product created successfully',
+      product: newProduct
+    });
+
   } catch (error) {
     console.error('Create product error:', error);
     res.status(500).json({ success: false, message: '❌ Failed to create product', error: error.message });
