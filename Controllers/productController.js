@@ -8,7 +8,7 @@ exports.createProduct = async (req, res) => {
   try {
     const {
       productId,
-      categoryId, // this is the string ID from request (e.g., CAT001)
+      categoryId,
       name,
       description,
       modelNumbers,
@@ -40,16 +40,30 @@ exports.createProduct = async (req, res) => {
       )
     );
 
+    // Parse price array and discount
+    const priceArr = price.split(',').map(p => Number(p));
+    const discountValue = Number(discount);
+
+    // Calculate discounted prices up to 3 decimal digits
+    let discountedPrices = [];
+    if (!isNaN(discountValue) && discountValue > 0) {
+      discountedPrices = priceArr.map(p =>
+        Number((p - (p * discountValue / 100)).toFixed(3))
+      );
+    } else {
+      discountedPrices = [...priceArr];
+    }
+
     const newProduct = new Product({
       productId,
-      categoryId: category._id, // use ObjectId reference
+      categoryId: category._id,
       name,
       description,
       modelNumbers: modelNumbers ? modelNumbers.split(',') : [],
       dimensions: dimensions ? dimensions.split(',') : [],
       colors: colors ? colors.split(',') : [],
-      price: price.split(',').map(p => Number(p)),
-      discount: Number(discount),
+      price: priceArr,
+      discount: discountValue,
       available: available !== undefined ? available : true,
       position: Number(position) || 0,
       images: uploadedImages
@@ -60,7 +74,11 @@ exports.createProduct = async (req, res) => {
     res.status(201).json({
       success: true,
       message: '✅ Product created successfully',
-      product: newProduct
+      product: {
+        ...newProduct.toObject(),
+        price: priceArr,
+        discountedPrice: discountedPrices
+      }
     });
 
   } catch (error) {
