@@ -86,11 +86,7 @@ exports.getCategories = async (req, res) => {
 
 
 
-cloudinary.config({
-  cloud_name: 'your-cloud-name',
-  api_key: 'your-api-key',
-  api_secret: 'your-api-secret'
-});
+
 
 exports.updateCategory = async (req, res) => {
   try {
