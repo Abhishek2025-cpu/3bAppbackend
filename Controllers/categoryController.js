@@ -85,8 +85,6 @@ exports.getCategories = async (req, res) => {
 };
 
 
-// Update Category by categoryId
-const cloudinary = require('cloudinary').v2;
 
 cloudinary.config({
   cloud_name: 'your-cloud-name',
