@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const productController = require('../controllers/productController');
+const productController = require('../Controllers/productController');
 const { uploadProduct } = require('../middleware/upload'); // multer config
 
 router.post('/add-product', uploadProduct.array('images'), productController.createProduct);
