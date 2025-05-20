@@ -21,25 +21,23 @@ exports.createProduct = async (req, res) => {
 
     // Upload images to Cloudinary
       const uploadedImages = await Promise.all(
-         req.files.map(async (file) => {
-           const uploadResult = await cloudinary.uploader.upload_stream({ resource_type: 'image' }, async (error, result) => {
-             if (error) throw new Error(error.message);
-             return result;
-           });
-   
-           // promisify the stream to wait for result
-           return new Promise((resolve, reject) => {
-             const stream = cloudinary.uploader.upload_stream({ folder: 'products' }, (err, result) => {
-               if (err) reject(err);
-               else resolve({
-                 url: result.secure_url,
-                 public_id: result.public_id,
-               });
-             });
-             stream.end(file.buffer);
-           });
-         })
-       );
+  req.files.map(file => {
+    return new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { folder: 'products' },
+        (err, result) => {
+          if (err) return reject(err);
+          resolve({
+            url: result.secure_url,
+            public_id: result.public_id,
+          });
+        }
+      );
+      streamifier.createReadStream(file.buffer).pipe(stream);
+    });
+  })
+);
+
 
     const newProduct = new Product({
       productId,
