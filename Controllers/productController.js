@@ -92,25 +92,37 @@ exports.getProducts = async (req, res) => {
   try {
     const products = await Product.find().sort({ position: 1 });
 
-    const result = products.map(prod => ({
-      _id: prod._id, // <-- Include the MongoDB _id field
-      productId: prod.productId,
-      categoryId: prod.categoryId,
-      name: prod.name,
-      description: prod.description,
-      modelNumbers: prod.modelNumbers,
-      dimensions: prod.dimensions,
-      colors: prod.colors,
-      price: prod.price,
-      discountedPrice: prod.discountedPrice,
-      discount: prod.discount,
-      available: prod.available,
-      position: prod.position,
-      images: prod.images.map(img => ({
-        url: img.url,
-        public_id: img.public_id
-      }))
-    }));
+    const result = products.map(prod => {
+      // Calculate discounted prices
+      let discountedPrices = [];
+      if (!isNaN(prod.discount) && prod.discount > 0) {
+        discountedPrices = prod.price.map(p =>
+          Number((p - (p * prod.discount / 100)).toFixed(3))
+        );
+      } else {
+        discountedPrices = [...prod.price];
+      }
+
+      return {
+        _id: prod._id,
+        productId: prod.productId,
+        categoryId: prod.categoryId,
+        name: prod.name,
+        description: prod.description,
+        modelNumbers: prod.modelNumbers,
+        dimensions: prod.dimensions,
+        colors: prod.colors,
+        price: prod.price,
+        discountedPrice: discountedPrices, // <-- Add this line
+        discount: prod.discount,
+        available: prod.available,
+        position: prod.position,
+        images: prod.images.map(img => ({
+          url: img.url,
+          public_id: img.public_id
+        }))
+      };
+    });
 
     res.status(200).json({ success: true, products: result });
   } catch (error) {
