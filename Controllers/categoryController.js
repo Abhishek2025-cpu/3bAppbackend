@@ -1,5 +1,6 @@
 const Category = require('../models/Category');
 const mongoose = require('mongoose');
+const cloudinary = require('../utils/cloudinary');
 
 async function generateCategoryId() {
   const lastCat = await Category.findOne().sort({ createdAt: -1 });
@@ -17,17 +18,34 @@ exports.createCategory = async (req, res) => {
       return res.status(400).json({ message: 'At least one image is required' });
     }
 
-    const images = req.files.map(file => ({
-      data: file.buffer,
-      contentType: file.mimetype,
-    }));
-
     const categoryId = await generateCategoryId();
+
+    // Upload each image to Cloudinary
+    const uploadedImages = await Promise.all(
+      req.files.map(async (file) => {
+        const uploadResult = await cloudinary.uploader.upload_stream({ resource_type: 'image' }, async (error, result) => {
+          if (error) throw new Error(error.message);
+          return result;
+        });
+
+        // promisify the stream to wait for result
+        return new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream({ folder: 'categories' }, (err, result) => {
+            if (err) reject(err);
+            else resolve({
+              url: result.secure_url,
+              public_id: result.public_id,
+            });
+          });
+          stream.end(file.buffer);
+        });
+      })
+    );
 
     const category = new Category({
       categoryId,
       name,
-      images,
+      images: uploadedImages,
       position: position !== undefined ? Number(position) : null
     });
 
@@ -35,19 +53,15 @@ exports.createCategory = async (req, res) => {
 
     res.status(201).json({
       message: '✅ Category created successfully',
-      category: {
-        ...category.toObject(),
-        images: category.images.map(img => ({
-          contentType: img.contentType,
-          data: img.data.toString('base64')
-        }))
-      }
+      category
     });
 
   } catch (error) {
     res.status(500).json({ message: '❌ Category creation failed', error: error.message });
   }
 };
+
+
 
 exports.getCategories = async (req, res) => {
   try {
