@@ -10,6 +10,10 @@ async function generateCategoryId() {
   return `CAT${String(lastNum).padStart(3, '0')}`;
 }
 
+const cloudinary = require('cloudinary').v2;
+const Category = require('../models/Category'); // adjust path as needed
+const generateCategoryId = require('../utils/generateCategoryId'); // if you're using a custom function
+
 exports.createCategory = async (req, res) => {
   try {
     const { name, position } = req.body;
@@ -20,24 +24,21 @@ exports.createCategory = async (req, res) => {
 
     const categoryId = await generateCategoryId();
 
-    // Upload each image to Cloudinary
+    // Upload all files to Cloudinary
     const uploadedImages = await Promise.all(
-      req.files.map(async (file) => {
-        const uploadResult = await cloudinary.uploader.upload_stream({ resource_type: 'image' }, async (error, result) => {
-          if (error) throw new Error(error.message);
-          return result;
-        });
-
-        // promisify the stream to wait for result
+      req.files.map(file => {
         return new Promise((resolve, reject) => {
-          const stream = cloudinary.uploader.upload_stream({ folder: 'categories' }, (err, result) => {
-            if (err) reject(err);
-            else resolve({
-              url: result.secure_url,
-              public_id: result.public_id,
-            });
-          });
-          stream.end(file.buffer);
+          const stream = cloudinary.uploader.upload_stream(
+            { folder: 'categories' },
+            (error, result) => {
+              if (error) return reject(error);
+              resolve({
+                url: result.secure_url,
+                public_id: result.public_id,
+              });
+            }
+          );
+          stream.end(file.buffer); // important: pass the file buffer to the stream
         });
       })
     );
@@ -46,7 +47,7 @@ exports.createCategory = async (req, res) => {
       categoryId,
       name,
       images: uploadedImages,
-      position: position !== undefined ? Number(position) : null
+      position: position ? Number(position) : null,
     });
 
     await category.save();
@@ -57,6 +58,7 @@ exports.createCategory = async (req, res) => {
     });
 
   } catch (error) {
+    console.error('Category creation error:', error);
     res.status(500).json({ message: '❌ Category creation failed', error: error.message });
   }
 };
