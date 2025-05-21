@@ -92,6 +92,16 @@ exports.getProducts = async (req, res) => {
   try {
     const products = await Product.find().sort({ position: 1 });
 
+    // Get counts for each categoryId
+    const categoryCounts = await Product.aggregate([
+      { $group: { _id: "$categoryId", count: { $sum: 1 } } }
+    ]);
+    // Convert to a lookup object for quick access
+    const categoryCountMap = {};
+    categoryCounts.forEach(cat => {
+      categoryCountMap[cat._id.toString()] = cat.count;
+    });
+
     const result = products.map(prod => {
       // Calculate discounted prices
       let discountedPrices = [];
@@ -113,14 +123,15 @@ exports.getProducts = async (req, res) => {
         dimensions: prod.dimensions,
         colors: prod.colors,
         price: prod.price,
-        discountedPrice: discountedPrices, // <-- Add this line
+        discountedPrice: discountedPrices,
         discount: prod.discount,
         available: prod.available,
         position: prod.position,
         images: prod.images.map(img => ({
           url: img.url,
           public_id: img.public_id
-        }))
+        })),
+        categoryProductCount: categoryCountMap[prod.categoryId?.toString()] || 0 // <-- Add count here
       };
     });
 
