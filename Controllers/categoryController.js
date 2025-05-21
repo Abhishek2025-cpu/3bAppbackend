@@ -85,9 +85,10 @@ exports.getCategories = async (req, res) => {
   try {
     const categories = await Category.find();
 
-    // Aggregate product counts for each categoryId
+    // Aggregate product counts for each categoryId, only where quantity > 0
     const Product = require('../models/Product');
     const productCounts = await Product.aggregate([
+      { $match: { quantity: { $gt: 0 } } }, // Only count products in stock
       { $group: { _id: "$categoryId", count: { $sum: 1 } } }
     ]);
     // Convert to a lookup object for quick access
@@ -97,7 +98,7 @@ exports.getCategories = async (req, res) => {
     });
 
     const updated = categories.map(cat => ({
-       _id: cat._id,
+      _id: cat._id,
       categoryId: cat.categoryId,
       name: cat.name,
       position: cat.position ?? null,
@@ -107,7 +108,7 @@ exports.getCategories = async (req, res) => {
             public_id: img.public_id
           }))
         : [],
-      totalProducts: productCountMap[cat._id?.toString()] || 0 // <-- Add this line
+      totalProducts: productCountMap[cat._id?.toString()] || 0 // Only counts products with quantity > 0
     }));
 
     res.status(200).json(updated);
