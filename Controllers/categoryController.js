@@ -97,19 +97,19 @@ exports.getCategories = async (req, res) => {
       productCountMap[pc._id?.toString()] = pc.count;
     });
 
-    const updated = categories.map(cat => ({
-      _id: cat._id,
-      categoryId: cat.categoryId,
-      name: cat.name,
-      position: cat.position ?? null,
-      images: Array.isArray(cat.images)
-        ? cat.images.map(img => ({
-            url: img.url,
-            public_id: img.public_id
-          }))
-        : [],
-      totalProducts: productCountMap[cat._id?.toString()] || 0 // Only counts products with quantity > 0
-    }));
+  const updated = categories.map(cat => ({
+  _id: cat._id,
+  categoryId: cat.categoryId,
+  name: cat.name,
+  position: cat.position ?? null,
+  images: Array.isArray(cat.images)
+    ? cat.images.map(img => ({
+        url: img.url,
+        public_id: img.public_id
+      }))
+    : [],
+  totalProducts: productCountMap[cat.categoryId] || 0 // <-- FIXED: use categoryId string
+}));
 
     res.status(200).json(updated);
   } catch (error) {
