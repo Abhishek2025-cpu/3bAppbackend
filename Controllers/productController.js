@@ -113,27 +113,27 @@ exports.getProducts = async (req, res) => {
         discountedPrices = [...prod.price];
       }
 
-      return {
-        _id: prod._id,
-        productId: prod.productId,
-        categoryId: prod.categoryId,
-        name: prod.name,
-        description: prod.description,
-        modelNumbers: prod.modelNumbers,
-        dimensions: prod.dimensions,
-        colors: prod.colors,
-        price: prod.price,
-        discountedPrice: discountedPrices,
-        discount: prod.discount,
-        available: prod.available,
-        position: prod.position,
-        images: prod.images.map(img => ({
-          url: img.url,
-          public_id: img.public_id
-        })),
-        // Now this is the sum of all product quantities in this category
-        categoryProductCount: categoryCountMap[prod.categoryId?.toString()] || 0
-      };
+    // ...inside your result mapping in getProducts:
+return {
+  _id: prod._id,
+  productId: prod.productId,
+  categoryId: prod.categoryId,
+  name: prod.name,
+  description: prod.description,
+  modelNumbers: prod.modelNumbers,
+  dimensions: prod.dimensions,
+  colors: prod.colors,
+  price: prod.price,
+  discountedPrice: discountedPrices,
+  discount: prod.discount,
+  available: prod.available,
+  position: prod.position,
+  images: prod.images.map(img => ({
+    url: img.url,
+    public_id: img.public_id
+  })),
+  productQuantity: prod.quantity // <-- Show this for each product
+};
     });
 
     res.status(200).json({ success: true, products: result });
