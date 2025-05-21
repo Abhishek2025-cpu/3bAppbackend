@@ -94,14 +94,14 @@ exports.getProducts = async (req, res) => {
   try {
     const products = await Product.find().sort({ position: 1 });
 
-    // Aggregate sum of quantity for each categoryId
+    // Aggregate sum of quantity for each categoryId (string)
     const categoryCounts = await Product.aggregate([
       { $group: { _id: "$categoryId", count: { $sum: "$quantity" } } }
     ]);
     // Convert to a lookup object for quick access
     const categoryCountMap = {};
     categoryCounts.forEach(cat => {
-      categoryCountMap[cat._id.toString()] = cat.count;
+      categoryCountMap[cat._id] = cat.count;
     });
 
     const result = products.map(prod => {
@@ -115,27 +115,27 @@ exports.getProducts = async (req, res) => {
         discountedPrices = [...prod.price];
       }
 
-    // ...inside your result mapping in getProducts:
-return {
-  _id: prod._id,
-  productId: prod.productId,
-  categoryId: prod.categoryId,
-  name: prod.name,
-  description: prod.description,
-  modelNumbers: prod.modelNumbers,
-  dimensions: prod.dimensions,
-  colors: prod.colors,
-  price: prod.price,
-  discountedPrice: discountedPrices,
-  discount: prod.discount,
-  available: prod.available,
-  position: prod.position,
-  images: prod.images.map(img => ({
-    url: img.url,
-    public_id: img.public_id
-  })),
-  productQuantity: prod.quantity || 0, // <-- Show this for each product
-};
+      return {
+        _id: prod._id,
+        productId: prod.productId,
+        categoryId: prod.categoryId,
+        name: prod.name,
+        description: prod.description,
+        modelNumbers: prod.modelNumbers,
+        dimensions: prod.dimensions,
+        colors: prod.colors,
+        price: prod.price,
+        discountedPrice: discountedPrices,
+        discount: prod.discount,
+        available: prod.available,
+        position: prod.position,
+        images: prod.images.map(img => ({
+          url: img.url,
+          public_id: img.public_id
+        })),
+        productQuantity: prod.quantity || 0, // Each product's quantity
+        categoryTotalQuantity: categoryCountMap[prod.categoryId] || 0 // Total quantity for this category
+      };
     });
 
     res.status(200).json({ success: true, products: result });
