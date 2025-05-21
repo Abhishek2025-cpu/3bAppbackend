@@ -14,15 +14,19 @@ async function generateCategoryId() {
 
 exports.createCategory = async (req, res) => {
   try {
+    console.log("➡️ Received request:", req.body);
+    console.log("➡️ Files received:", req.files);
+
     const { name, position } = req.body;
 
     if (!req.files || req.files.length === 0) {
+      console.log("❌ No files uploaded");
       return res.status(400).json({ message: 'At least one image is required' });
     }
 
     const categoryId = await generateCategoryId();
+    console.log("🆔 Generated Category ID:", categoryId);
 
-    // Upload each file using a proper promise wrapper
     const uploadImageToCloudinary = (fileBuffer) => {
       return new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream({ folder: 'categories' }, (err, result) => {
@@ -36,10 +40,11 @@ exports.createCategory = async (req, res) => {
       });
     };
 
-    // Upload all files
     const uploadedImages = await Promise.all(
       req.files.map(file => uploadImageToCloudinary(file.buffer))
     );
+
+    console.log("✅ Images uploaded:", uploadedImages);
 
     const category = new Category({
       categoryId,
@@ -56,10 +61,11 @@ exports.createCategory = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("❌ Error creating category:", error); // Add this for debugging
+    console.error("❌ Error creating category:", error);
     res.status(500).json({ message: '❌ Category creation failed', error: error.message });
   }
 };
+
 
 
 
