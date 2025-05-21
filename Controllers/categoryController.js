@@ -85,6 +85,17 @@ exports.getCategories = async (req, res) => {
   try {
     const categories = await Category.find();
 
+    // Aggregate product counts for each categoryId
+    const Product = require('../models/Product');
+    const productCounts = await Product.aggregate([
+      { $group: { _id: "$categoryId", count: { $sum: 1 } } }
+    ]);
+    // Convert to a lookup object for quick access
+    const productCountMap = {};
+    productCounts.forEach(pc => {
+      productCountMap[pc._id?.toString()] = pc.count;
+    });
+
     const updated = categories.map(cat => ({
       categoryId: cat.categoryId,
       name: cat.name,
@@ -94,7 +105,8 @@ exports.getCategories = async (req, res) => {
             url: img.url,
             public_id: img.public_id
           }))
-        : []
+        : [],
+      totalProducts: productCountMap[cat._id?.toString()] || 0 // <-- Add this line
     }));
 
     res.status(200).json(updated);
@@ -102,7 +114,6 @@ exports.getCategories = async (req, res) => {
     res.status(500).json({ message: '❌ Failed to fetch categories', error: error.message });
   }
 };
-
 
 
 

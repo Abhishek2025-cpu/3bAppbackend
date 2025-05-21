@@ -15,6 +15,7 @@ const productSchema = new mongoose.Schema({
   price: { type: [Number], required: true }, // [original, discounted]
   discount: { type: Number, default: 0 },
   available: { type: Boolean, default: true },
+  quantity: { type: Number, required: true, default: 0 },
   position: { type: Number, default: 0 }
 }, { timestamps: true });
 
