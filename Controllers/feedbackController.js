@@ -65,9 +65,11 @@ exports.getPublicFeedbacks = async (req, res) => {
 exports.updateFeedback = async (req, res) => {
   try {
     const { feedbackId } = req.params;
+    const cleanId = feedbackId.trim(); // 🧼 Remove newline or whitespace
+
     const { message, isPrivate, rating } = req.body;
 
-    const feedback = await Feedback.findById(feedbackId);
+    const feedback = await Feedback.findById(cleanId); // Use cleanId
     if (!feedback) {
       return res.status(404).json({ success: false, message: 'Feedback not found' });
     }
@@ -85,6 +87,7 @@ exports.updateFeedback = async (req, res) => {
     res.status(500).json({ success: false, message: '❌ Failed to update feedback', error: error.message });
   }
 };
+
 
 
 // controllers/feedbackController.js
