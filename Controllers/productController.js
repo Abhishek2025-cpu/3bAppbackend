@@ -132,7 +132,7 @@ return {
     url: img.url,
     public_id: img.public_id
   })),
-  productQuantity: prod.quantity // <-- Show this for each product
+  productQuantity: prod.quantity || 0, // <-- Show this for each product
 };
     });
 
