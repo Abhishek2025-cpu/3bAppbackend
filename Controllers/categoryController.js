@@ -20,7 +20,6 @@ exports.createCategory = async (req, res) => {
     const { name, position } = req.body;
 
     if (!req.files || req.files.length === 0) {
-      console.log("❌ No files uploaded");
       return res.status(400).json({ message: 'At least one image is required' });
     }
 
@@ -29,22 +28,34 @@ exports.createCategory = async (req, res) => {
 
     const uploadImageToCloudinary = (fileBuffer) => {
       return new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream({ folder: 'categories' }, (err, result) => {
-          if (err) return reject(err);
-          resolve({
-            url: result.secure_url,
-            public_id: result.public_id,
-          });
-        });
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: 'categories', resource_type: 'image' },
+          (err, result) => {
+            if (err) {
+              console.error("❌ Cloudinary Upload Error:", err);
+              return reject(new Error("Cloudinary error: " + err.message));
+            }
+            resolve({
+              url: result.secure_url,
+              public_id: result.public_id,
+            });
+          }
+        );
         stream.end(fileBuffer);
       });
     };
 
-    const uploadedImages = await Promise.all(
-      req.files.map(file => uploadImageToCloudinary(file.buffer))
-    );
-
-    console.log("✅ Images uploaded:", uploadedImages);
+    let uploadedImages = [];
+    try {
+      uploadedImages = await Promise.all(
+        req.files.map(file => uploadImageToCloudinary(file.buffer))
+      );
+    } catch (uploadError) {
+      return res.status(500).json({
+        message: '❌ Cloudinary upload failed',
+        error: uploadError.message
+      });
+    }
 
     const category = new Category({
       categoryId,
@@ -65,6 +76,7 @@ exports.createCategory = async (req, res) => {
     res.status(500).json({ message: '❌ Category creation failed', error: error.message });
   }
 };
+
 
 
 
