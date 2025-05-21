@@ -4,6 +4,7 @@ const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const productRoutes = require('./routes/productRoutes');
+const feedbackRoutes = require('./routes/feedbackRoutes');
 
 const orderRoutes = require('./routes/orderRoutes');
 const path = require('path');
@@ -28,6 +29,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/feedback', feedbackRoutes);
 
 // Default route
 app.get('/', (req, res) => res.send('API is running...'));
