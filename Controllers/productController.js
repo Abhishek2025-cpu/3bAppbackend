@@ -17,6 +17,7 @@ exports.createProduct = async (req, res) => {
       price,
       discount,
       available,
+      quantity,
       position
     } = req.body;
 
@@ -66,6 +67,7 @@ exports.createProduct = async (req, res) => {
       discount: discountValue,
       available: available !== undefined ? available : true,
       position: Number(position) || 0,
+       quantity: quantity !== undefined ? Number(quantity) : 0,
       images: uploadedImages
     });
 
