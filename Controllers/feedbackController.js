@@ -58,3 +58,69 @@ exports.getPublicFeedbacks = async (req, res) => {
     res.status(500).json({ success: false, message: '❌ Failed to fetch feedbacks', error: error.message });
   }
 };
+
+
+// controllers/feedbackController.js
+
+exports.updateFeedback = async (req, res) => {
+  try {
+    const { feedbackId } = req.params;
+    const { message, isPrivate, rating } = req.body;
+
+    const feedback = await Feedback.findById(feedbackId);
+    if (!feedback) {
+      return res.status(404).json({ success: false, message: 'Feedback not found' });
+    }
+
+    if (message) feedback.message = message;
+    if (typeof isPrivate === 'boolean') feedback.isPrivate = isPrivate;
+    if (rating !== undefined) {
+      feedback.rating = Math.max(1, Math.min(5, Number(rating)));
+    }
+
+    await feedback.save();
+
+    res.status(200).json({ success: true, message: '✅ Feedback updated successfully', feedback });
+  } catch (error) {
+    res.status(500).json({ success: false, message: '❌ Failed to update feedback', error: error.message });
+  }
+};
+
+
+// controllers/feedbackController.js
+
+exports.deleteFeedback = async (req, res) => {
+  try {
+    const { feedbackId } = req.params;
+    const deleted = await Feedback.findByIdAndDelete(feedbackId);
+
+    if (!deleted) {
+      return res.status(404).json({ success: false, message: 'Feedback not found' });
+    }
+
+    res.status(200).json({ success: true, message: '🗑️ Feedback deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: '❌ Failed to delete feedback', error: error.message });
+  }
+};
+
+
+// controllers/feedbackController.js
+
+exports.getFeedbackByUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const feedbacks = await Feedback.find({ user: userId })
+      .populate('user', 'name profileImage')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      message: '✅ User feedbacks fetched successfully',
+      feedbacks
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: '❌ Failed to get feedbacks', error: error.message });
+  }
+};
