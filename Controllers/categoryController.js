@@ -11,6 +11,7 @@ async function generateCategoryId() {
 }
 
 
+
 exports.createCategory = async (req, res) => {
   try {
     const { name, position } = req.body;
@@ -21,21 +22,24 @@ exports.createCategory = async (req, res) => {
 
     const categoryId = await generateCategoryId();
 
-    // Upload all files to Cloudinary
+    // Upload images to Cloudinary
     const uploadedImages = await Promise.all(
-      req.files.map(file => {
+      req.files.map((file) => {
         return new Promise((resolve, reject) => {
-          const stream = cloudinary.uploader.upload_stream(
+          cloudinary.uploader.upload_stream(
             { folder: 'categories' },
-            (error, result) => {
-              if (error) return reject(error);
-              resolve({
-                url: result.secure_url,
-                public_id: result.public_id,
-              });
+            (err, result) => {
+              if (err) {
+                console.error('❌ Cloudinary Upload Error:', err);
+                reject(err);
+              } else {
+                resolve({
+                  url: result.secure_url,
+                  public_id: result.public_id,
+                });
+              }
             }
-          );
-          stream.end(file.buffer); // important: pass the file buffer to the stream
+          ).end(file.buffer);
         });
       })
     );
@@ -44,7 +48,7 @@ exports.createCategory = async (req, res) => {
       categoryId,
       name,
       images: uploadedImages,
-      position: position ? Number(position) : null,
+      position: position !== undefined ? Number(position) : null,
     });
 
     await category.save();
@@ -55,7 +59,7 @@ exports.createCategory = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Category creation error:', error);
+    console.error('❌ CATEGORY CREATE ERROR:', error); // <--- Log the real issue
     res.status(500).json({ message: '❌ Category creation failed', error: error.message });
   }
 };
