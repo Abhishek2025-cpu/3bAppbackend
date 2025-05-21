@@ -97,6 +97,7 @@ exports.getCategories = async (req, res) => {
     });
 
     const updated = categories.map(cat => ({
+       _id: cat._id,
       categoryId: cat.categoryId,
       name: cat.name,
       position: cat.position ?? null,
