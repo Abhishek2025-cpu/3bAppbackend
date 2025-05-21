@@ -10,9 +10,6 @@ async function generateCategoryId() {
   return `CAT${String(lastNum).padStart(3, '0')}`;
 }
 
-const cloudinary = require('cloudinary').v2;
-const Category = require('../models/Category'); // adjust path as needed
-const generateCategoryId = require('../utils/generateCategoryId'); // if you're using a custom function
 
 exports.createCategory = async (req, res) => {
   try {
