@@ -85,38 +85,37 @@ exports.getCategories = async (req, res) => {
   try {
     const categories = await Category.find();
 
-    // Aggregate product counts for each categoryId, only where quantity > 0
+    // Aggregate product counts for each categoryId (string), only where quantity > 0
     const Product = require('../models/Product');
     const productCounts = await Product.aggregate([
-      { $match: { quantity: { $gt: 0 } } }, // Only count products in stock
+      { $match: { quantity: { $gt: 0 } } },
       { $group: { _id: "$categoryId", count: { $sum: 1 } } }
     ]);
     // Convert to a lookup object for quick access
     const productCountMap = {};
     productCounts.forEach(pc => {
-      productCountMap[pc._id?.toString()] = pc.count;
+      productCountMap[pc._id] = pc.count; // _id is categoryId string
     });
 
-  const updated = categories.map(cat => ({
-  _id: cat._id,
-  categoryId: cat.categoryId,
-  name: cat.name,
-  position: cat.position ?? null,
-  images: Array.isArray(cat.images)
-    ? cat.images.map(img => ({
-        url: img.url,
-        public_id: img.public_id
-      }))
-    : [],
-  totalProducts: productCountMap[cat.categoryId] || 0 // <-- FIXED: use categoryId string
-}));
+    const updated = categories.map(cat => ({
+      _id: cat._id,
+      categoryId: cat.categoryId,
+      name: cat.name,
+      position: cat.position ?? null,
+      images: Array.isArray(cat.images)
+        ? cat.images.map(img => ({
+            url: img.url,
+            public_id: img.public_id
+          }))
+        : [],
+      totalProducts: productCountMap[cat.categoryId] || 0 // <-- use categoryId string for lookup
+    }));
 
     res.status(200).json(updated);
   } catch (error) {
     res.status(500).json({ message: '❌ Failed to fetch categories', error: error.message });
   }
 };
-
 
 
 
