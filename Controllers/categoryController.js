@@ -22,26 +22,23 @@ exports.createCategory = async (req, res) => {
 
     const categoryId = await generateCategoryId();
 
-    // Upload images to Cloudinary
-    const uploadedImages = await Promise.all(
-      req.files.map((file) => {
-        return new Promise((resolve, reject) => {
-          cloudinary.uploader.upload_stream(
-            { folder: 'categories' },
-            (err, result) => {
-              if (err) {
-                console.error('❌ Cloudinary Upload Error:', err);
-                reject(err);
-              } else {
-                resolve({
-                  url: result.secure_url,
-                  public_id: result.public_id,
-                });
-              }
-            }
-          ).end(file.buffer);
+    // Upload each file using a proper promise wrapper
+    const uploadImageToCloudinary = (fileBuffer) => {
+      return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream({ folder: 'categories' }, (err, result) => {
+          if (err) return reject(err);
+          resolve({
+            url: result.secure_url,
+            public_id: result.public_id,
+          });
         });
-      })
+        stream.end(fileBuffer);
+      });
+    };
+
+    // Upload all files
+    const uploadedImages = await Promise.all(
+      req.files.map(file => uploadImageToCloudinary(file.buffer))
     );
 
     const category = new Category({
@@ -59,10 +56,11 @@ exports.createCategory = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ CATEGORY CREATE ERROR:', error); // <--- Log the real issue
+    console.error("❌ Error creating category:", error); // Add this for debugging
     res.status(500).json({ message: '❌ Category creation failed', error: error.message });
   }
 };
+
 
 
 exports.getCategories = async (req, res) => {
