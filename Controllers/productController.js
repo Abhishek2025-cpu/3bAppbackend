@@ -92,9 +92,9 @@ exports.getProducts = async (req, res) => {
   try {
     const products = await Product.find().sort({ position: 1 });
 
-    // Get counts for each categoryId
+    // Aggregate sum of quantity for each categoryId
     const categoryCounts = await Product.aggregate([
-      { $group: { _id: "$categoryId", count: { $sum: 1 } } }
+      { $group: { _id: "$categoryId", count: { $sum: "$quantity" } } }
     ]);
     // Convert to a lookup object for quick access
     const categoryCountMap = {};
@@ -131,7 +131,8 @@ exports.getProducts = async (req, res) => {
           url: img.url,
           public_id: img.public_id
         })),
-        categoryProductCount: categoryCountMap[prod.categoryId?.toString()] || 0 // <-- Add count here
+        // Now this is the sum of all product quantities in this category
+        categoryProductCount: categoryCountMap[prod.categoryId?.toString()] || 0
       };
     });
 

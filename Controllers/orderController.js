@@ -14,18 +14,29 @@ exports.placeOrder = async (req, res) => {
   try {
     const { userId, items, shippingAddresses } = req.body;
 
-    const products = await Promise.all(
-      items.map(async item => {
-        const product = await Product.findById(item.productId);
-        return {
-          productId: product._id,
-          quantity: item.quantity,
-          priceAtPurchase: product.price[0], // or handle array/index properly
-          orderId: generateOrderId()
-        };
-      })
-    );
+// In orderController.js, inside placeOrder
+const products = await Promise.all(
+  items.map(async item => {
+    const product = await Product.findById(item.productId);
+    if (!product) throw new Error('Product not found');
+    if (product.quantity < item.quantity) throw new Error(`Insufficient stock for product: ${product.name}`);
 
+    // Deduct the ordered quantity
+    product.quantity -= item.quantity;
+    if (product.quantity <= 0) {
+      product.quantity = 0;
+      product.available = false;
+    }
+    await product.save();
+
+    return {
+      productId: product._id,
+      quantity: item.quantity,
+      priceAtPurchase: product.price[0],
+      orderId: generateOrderId()
+    };
+  })
+);
     const newOrder = new Order({
       userId,
       products,
