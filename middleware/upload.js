@@ -1,13 +1,24 @@
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 
-
-// Use memory storage for saving image in MongoDB
+// Accept any file type (for .obj support)
 const storage = multer.memoryStorage();
 
-const uploadCat = multer({ storage });
-const uploadProduct = multer({storage});
-const uploadPrifle = multer({ storage });
+const fileFilter = (req, file, cb) => {
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'model/obj', 'application/octet-stream'];
+  // Accept .obj files by mimetype or extension
+  if (
+    allowedTypes.includes(file.mimetype) ||
+    path.extname(file.originalname).toLowerCase() === '.obj'
+  ) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only images and .obj files are allowed!'), false);
+  }
+};
 
-module.exports = { uploadCat,uploadProduct,uploadPrifle };
+const uploadCat = multer({ storage, fileFilter });
+const uploadProduct = multer({ storage, fileFilter });
+const uploadProfile = multer({ storage, fileFilter });
+
+module.exports = { uploadCat, uploadProduct, uploadProfile };

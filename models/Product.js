@@ -11,6 +11,13 @@ const productSchema = new mongoose.Schema({
     url: String,
     public_id: String
   }],
+  models: [ // <-- Add this block inside the schema
+    {
+      url: String,
+      public_id: String,
+      format: String
+    }
+  ],
   colors: [String],
   price: { type: [Number], required: true }, // [original, discounted]
   discount: { type: Number, default: 0 },
