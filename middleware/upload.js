@@ -16,9 +16,10 @@ const fileFilter = (req, file, cb) => {
     cb(new Error('Only images and .obj files are allowed!'), false);
   }
 };
+const limits = { fileSize: 100 * 1024 * 1024 }; // 100MB
 
-const uploadCat = multer({ storage, fileFilter });
-const uploadProduct = multer({ storage, fileFilter });
-const uploadPrifle = multer({ storage, fileFilter });
+const uploadCat = multer({ storage, fileFilter,limits });
+const uploadProduct = multer({ storage, fileFilter,limits });
+const uploadPrifle = multer({ storage, fileFilter,limits });
 
 module.exports = { uploadCat, uploadProduct, uploadPrifle };
