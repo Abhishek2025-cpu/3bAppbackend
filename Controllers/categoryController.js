@@ -247,17 +247,17 @@ exports.getCategoryById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Try to find by categoryId string first, then fallback to _id
-    let category = await Category.findOne({ categoryId: id });
-    if (!category && mongoose.Types.ObjectId.isValid(id)) {
-      category = await Category.findById(id);
+    // Find category by _id (ObjectId)
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid category id' });
     }
+    const category = await Category.findById(id);
     if (!category) {
       return res.status(404).json({ message: 'Category not found' });
     }
 
-    // Find all products with this categoryId (string)
-    const products = await Product.find({ categoryId: category.categoryId });
+    // Find all products with this category's _id
+    const products = await Product.find({ categoryId: category._id });
 
     res.status(200).json({
       category: {
