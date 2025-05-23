@@ -19,6 +19,6 @@ const fileFilter = (req, file, cb) => {
 
 const uploadCat = multer({ storage, fileFilter });
 const uploadProduct = multer({ storage, fileFilter });
-const uploadProfile = multer({ storage, fileFilter });
+const uploadPrifle = multer({ storage, fileFilter });
 
-module.exports = { uploadCat, uploadProduct, uploadProfile };
+module.exports = { uploadCat, uploadProduct, uploadPrifle };

@@ -11,7 +11,7 @@ const productSchema = new mongoose.Schema({
     url: String,
     public_id: String
   }],
-  models: [ // <-- Add this block inside the schema
+  models: [ 
     {
       url: String,
       public_id: String,
