@@ -1,5 +1,6 @@
 const Category = require('../models/Category');
 const mongoose = require('mongoose');
+const Product = require('../models/Product');
 const cloudinary = require('../utils/cloudinary');
 
 async function generateCategoryId() {
@@ -241,3 +242,35 @@ exports.toggleCategoryStock = async (req, res) => {
   }
 };
 
+// GET /api/categories/:id
+exports.getCategoryById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Try to find by categoryId string first, then fallback to _id
+    let category = await Category.findOne({ categoryId: id });
+    if (!category && mongoose.Types.ObjectId.isValid(id)) {
+      category = await Category.findById(id);
+    }
+    if (!category) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
+
+    // Find all products with this categoryId (string)
+    const products = await Product.find({ categoryId: category.categoryId });
+
+    res.status(200).json({
+      category: {
+        _id: category._id,
+        categoryId: category.categoryId,
+        name: category.name,
+        position: category.position,
+        images: category.images,
+        inStock: category.inStock
+      },
+      products
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch category', error: error.message });
+  }
+};
