@@ -3,6 +3,8 @@ const cloudinary = require('../utils/cloudinary');
 const streamifier = require('streamifier');
 const Category = require('../models/Category');
 const path = require('path'); 
+const { uploadToGCS } = require('../utils/gcsUploader');
+
 
 const uploadObjToCloudinary = (fileBuffer, fileName) => {
   return new Promise((resolve, reject) => {
@@ -72,9 +74,12 @@ exports.createProduct = async (req, res) => {
       discountedPrices = [...priceArr];
     }
 
-    const objFiles = req.files.filter(file => path.extname(file.originalname).toLowerCase() === '.obj');
+const objFiles = req.files.filter(file =>
+  path.extname(file.originalname).toLowerCase() === '.obj'
+);
+
 const uploadedModels = await Promise.all(
-  objFiles.map(file => uploadObjToCloudinary(file.buffer, path.parse(file.originalname).name))
+  objFiles.map(file => uploadToGCS(file.buffer, file.originalname, 'models'))
 );
 
     const newProduct = new Product({
