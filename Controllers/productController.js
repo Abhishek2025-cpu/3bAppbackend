@@ -2,7 +2,24 @@ const Product = require('../models/Product');
 const cloudinary = require('../utils/cloudinary');
 const streamifier = require('streamifier');
 const Category = require('../models/Category');
+const path = require('path'); 
 
+const uploadObjToCloudinary = (fileBuffer, fileName) => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: 'models', resource_type: 'raw', public_id: fileName },
+      (err, result) => {
+        if (err) return reject(err);
+        resolve({
+          url: result.secure_url,
+          public_id: result.public_id,
+          format: result.format
+        });
+      }
+    );
+    stream.end(fileBuffer);
+  });
+};
 // Create Product
 exports.createProduct = async (req, res) => {
   try {
@@ -55,9 +72,15 @@ exports.createProduct = async (req, res) => {
       discountedPrices = [...priceArr];
     }
 
+    const objFiles = req.files.filter(file => path.extname(file.originalname).toLowerCase() === '.obj');
+const uploadedModels = await Promise.all(
+  objFiles.map(file => uploadObjToCloudinary(file.buffer, path.parse(file.originalname).name))
+);
+
     const newProduct = new Product({
       productId,
       categoryId: category._id,
+      models: uploadedModels,
       name,
       description,
       modelNumbers: modelNumbers ? modelNumbers.split(',') : [],
