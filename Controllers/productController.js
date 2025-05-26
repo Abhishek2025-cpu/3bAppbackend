@@ -25,113 +25,73 @@ const uploadObjToCloudinary = (fileBuffer, fileName) => {
 // Create Product
 exports.createProduct = async (req, res) => {
   try {
-    const {
-      productId,
-      categoryId,
-      name,
-      description,
-      modelNumbers,
-      dimensions,
-      discount,
-      available,
-      quantity,
-      position
-    } = req.body;
+    const { name, description, category, colors } = req.body;
 
-    const category = await Category.findOne({ categoryId });
-    if (!category) return res.status(400).json({ success: false, message: 'Invalid categoryId provided' });
-
-    // Parse colors JSON string from req.body.colors
-    let colorsInput = [];
-    if (req.body.colors) {
-      colorsInput = JSON.parse(req.body.colors);
+    let parsedColors;
+    try {
+      parsedColors = JSON.parse(colors); // Must be a JSON string
+    } catch {
+      return res.status(400).json({ success: false, message: "Invalid colors JSON format" });
     }
 
-    // Upload images per color:
-    // This requires you to send images grouped by color in frontend
-    // For example, each file's fieldname includes the colorName so we can filter here
-    // e.g. files: [{fieldname: 'color_Red_0', buffer: ...}, {fieldname: 'color_Blue_0', buffer: ...}]
+    // Group uploaded files by color (e.g. 'color_Red_0')
+    const colorImageMap = {};
+    (req.files || []).forEach(file => {
+      const match = file.fieldname.match(/^color_(\w+)_\d+$/); // e.g., color_Red_0
+      if (match) {
+        const color = match[1];
+        if (!colorImageMap[color]) colorImageMap[color] = [];
+        colorImageMap[color].push(file);
+      }
+    });
 
-    // Group files by colorName
-    const filesByColor = {};
-    if (req.files && req.files.length > 0) {
-      req.files.forEach(file => {
-        // extract colorName from fieldname: e.g. "color_Red_0" => "Red"
-        const match = file.fieldname.match(/^color_(.+?)_/);
-        if (match) {
-          const colorName = match[1];
-          if (!filesByColor[colorName]) filesByColor[colorName] = [];
-          filesByColor[colorName].push(file);
-        }
-      });
-    }
+    const colorVariants = await Promise.all(
+      parsedColors.map(async (item) => {
+        const { colorName, price } = item;
+        const priceArr = price.split(",").map(p => parseFloat(p.trim()));
 
-    // Upload images for each color
-    const colors = await Promise.all(colorsInput.map(async colorObj => {
-      const colorName = colorObj.colorName;
+        const uploadedImages = await Promise.all(
+          (colorImageMap[colorName] || []).map(file =>
+            new Promise((resolve, reject) => {
+              const uploadStream = cloudinary.uploader.upload_stream(
+                { folder: "products/colors" },
+                (err, result) => {
+                  if (err) return reject(err);
+                  resolve({
+                    url: result.secure_url,
+                    public_id: result.public_id
+                  });
+                }
+              );
+              uploadStream.end(file.buffer);
+            })
+          )
+        );
 
-      const priceArr = colorObj.price.split(',').map(p => Number(p));
-
-      const imagesToUpload = filesByColor[colorName] || [];
-
-      const uploadedImages = await Promise.all(
-        imagesToUpload.map(file =>
-          new Promise((resolve, reject) => {
-            const stream = cloudinary.uploader.upload_stream({ folder: `products/colors/${colorName}` }, (err, result) => {
-              if (err) return reject(err);
-              resolve({ url: result.secure_url, public_id: result.public_id });
-            });
-            stream.end(file.buffer);
-          })
-        )
-      );
-
-      return {
-        colorName,
-        price: priceArr,
-        images: uploadedImages
-      };
-    }));
-
-    // Handle modelNumbers, dimensions (comma separated strings to arrays)
-    const modelNums = modelNumbers ? modelNumbers.split(',') : [];
-    const dims = dimensions ? dimensions.split(',') : [];
-
-    // Your other file uploads for models (obj files)
-    const objFiles = req.files.filter(file => path.extname(file.originalname).toLowerCase() === '.obj');
-
-    const uploadedModels = await Promise.all(
-      objFiles.map(file => uploadToGCS(file.buffer, file.originalname, 'models'))
+        return {
+          colorName,
+          price: priceArr,
+          images: uploadedImages
+        };
+      })
     );
 
-    const newProduct = new Product({
-      productId,
-      categoryId: category._id,
-      models: uploadedModels,
+    const product = new Product({
       name,
       description,
-      modelNumbers: modelNums,
-      dimensions: dims,
-      colors, // <-- updated colors array with price and images
-      discount: Number(discount) || 0,
-      available: available !== undefined ? available : true,
-      position: Number(position) || 0,
-      quantity: Number(quantity) || 0,
+      category,
+      colorVariants
     });
 
-    await newProduct.save();
+    await product.save();
 
-    res.status(201).json({
-      success: true,
-      message: '✅ Product created successfully',
-      product: newProduct
-    });
-
-  } catch (error) {
-    console.error('Create product error:', error);
-    res.status(500).json({ success: false, message: '❌ Failed to create product', error: error.message });
+    res.status(201).json({ success: true, message: "Product created", data: product });
+  } catch (err) {
+    console.error("CREATE ERROR:", err);
+    res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
+
 
 
 // Get All Products (sorted by position)
@@ -139,27 +99,17 @@ exports.getProducts = async (req, res) => {
   try {
     const products = await Product.find().sort({ position: 1 });
 
-    // Aggregate sum of quantity for each categoryId (string)
+    // Aggregate total quantity per categoryId
     const categoryCounts = await Product.aggregate([
       { $group: { _id: "$categoryId", count: { $sum: "$quantity" } } }
     ]);
-    // Convert to a lookup object for quick access
+
     const categoryCountMap = {};
     categoryCounts.forEach(cat => {
-      categoryCountMap[cat._id] = cat.count;
+      categoryCountMap[cat._id.toString()] = cat.count;
     });
 
     const result = products.map(prod => {
-      // Calculate discounted prices
-      let discountedPrices = [];
-      if (!isNaN(prod.discount) && prod.discount > 0) {
-        discountedPrices = prod.price.map(p =>
-          Number((p - (p * prod.discount / 100)).toFixed(3))
-        );
-      } else {
-        discountedPrices = [...prod.price];
-      }
-
       return {
         _id: prod._id,
         productId: prod.productId,
@@ -168,26 +118,49 @@ exports.getProducts = async (req, res) => {
         description: prod.description,
         modelNumbers: prod.modelNumbers,
         dimensions: prod.dimensions,
-        colors: prod.colors,
-        price: prod.price,
-        discountedPrice: discountedPrices,
         discount: prod.discount,
         available: prod.available,
         position: prod.position,
-        images: prod.images.map(img => ({
-          url: img.url,
-          public_id: img.public_id
-        })),
-        productQuantity: prod.quantity || 0, // Each product's quantity
-        categoryTotalQuantity: categoryCountMap[prod.categoryId] || 0 // Total quantity for this category
+        productQuantity: prod.quantity || 0,
+        categoryTotalQuantity: categoryCountMap[prod.categoryId.toString()] || 0,
+
+        // Map colors with original and discounted prices
+        colors: prod.colors.map(color => {
+          const [original, discounted] = color.price;
+          return {
+            colorName: color.colorName,
+            price: {
+              original,
+              discounted
+            },
+            images: color.images.map(img => ({
+              url: img.url,
+              public_id: img.public_id
+            }))
+          };
+        }),
+
+        // Optional: expose 3D models if needed
+        models: prod.models.map(model => ({
+          url: model.url,
+          public_id: model.public_id,
+          format: model.format
+        }))
       };
     });
 
     res.status(200).json({ success: true, products: result });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: '❌ Failed to fetch products', error: error.message });
+    console.error('Error fetching products:', error);
+    res.status(500).json({
+      success: false,
+      message: '❌ Failed to fetch products',
+      error: error.message
+    });
   }
 };
+
 
 
 // Get Product by Unique ID
