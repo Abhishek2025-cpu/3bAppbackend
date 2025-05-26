@@ -25,93 +25,124 @@ const uploadObjToCloudinary = (fileBuffer, fileName) => {
 // Create Product
 exports.createProduct = async (req, res) => {
   try {
-    const { name, description, category, colors } = req.body;
+    const {
+      productId,
+      categoryId,
+      name,
+      description,
+      modelNumbers,
+      dimensions,
+      colors,
+      price,
+      discount,
+      available,
+      quantity,
+      position
+    } = req.body;
 
-    let parsedColors;
-    try {
-      parsedColors = JSON.parse(colors);
-    } catch {
-      return res.status(400).json({ success: false, message: "Invalid colors JSON format" });
+    // 🔍 Find the category by its string ID
+    const category = await Category.findOne({ categoryId });
+    if (!category) return res.status(400).json({ success: false, message: 'Invalid categoryId provided' });
+
+    // 🖼️ Upload images
+    const uploadedImages = await Promise.all(
+      req.files.map(file =>
+        new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream({ folder: 'products' }, (err, result) => {
+            if (err) return reject(err);
+            resolve({
+              url: result.secure_url,
+              public_id: result.public_id,
+            });
+          });
+          stream.end(file.buffer);
+        })
+      )
+    );
+
+    // Parse price array and discount
+    const priceArr = price.split(',').map(p => Number(p));
+    const discountValue = Number(discount);
+
+    // Calculate discounted prices up to 3 decimal digits
+    let discountedPrices = [];
+    if (!isNaN(discountValue) && discountValue > 0) {
+      discountedPrices = priceArr.map(p =>
+        Number((p - (p * discountValue / 100)).toFixed(3))
+      );
+    } else {
+      discountedPrices = [...priceArr];
     }
 
-    const colorImageMap = {};
-    (req.files || []).forEach(file => {
-      const match = file.fieldname.match(/^color_(\w+)_\d+$/);
-      if (match) {
-        const color = match[1];
-        if (!colorImageMap[color]) colorImageMap[color] = [];
-        colorImageMap[color].push(file);
+const objFiles = req.files.filter(file =>
+  path.extname(file.originalname).toLowerCase() === '.obj'
+);
+
+const uploadedModels = await Promise.all(
+  objFiles.map(file => uploadToGCS(file.buffer, file.originalname, 'models'))
+);
+
+    const newProduct = new Product({
+      productId,
+      categoryId: category._id,
+      models: uploadedModels,
+      name,
+      description,
+      modelNumbers: modelNumbers ? modelNumbers.split(',') : [],
+      dimensions: dimensions ? dimensions.split(',') : [],
+      colors: colors ? colors.split(',') : [],
+      price: priceArr,
+      discount: discountValue,
+      available: available !== undefined ? available : true,
+      position: Number(position) || 0,
+       quantity: quantity !== undefined ? Number(quantity) : 0,
+      images: uploadedImages
+    });
+
+    await newProduct.save();
+
+    res.status(201).json({
+      success: true,
+      message: '✅ Product created successfully',
+      product: {
+        ...newProduct.toObject(),
+        price: priceArr,
+        discountedPrice: discountedPrices
       }
     });
 
-    const colorVariants = await Promise.all(
-      parsedColors.map(async (item) => {
-        const { colorName, price } = item;
-        const priceArr = price.split(",").map(p => parseFloat(p.trim()));
-
-        const uploadedImages = await Promise.all(
-          (colorImageMap[colorName] || []).map(file =>
-            new Promise((resolve, reject) => {
-              const uploadStream = cloudinary.uploader.upload_stream(
-                { folder: "products/colors" },
-                (err, result) => {
-                  if (err) return reject(err);
-                  resolve({
-                    url: result.secure_url,
-                    public_id: result.public_id
-                  });
-                }
-              );
-              uploadStream.end(file.buffer);
-            })
-          )
-        );
-
-        return {
-          colorName,
-          price: priceArr,
-          images: uploadedImages
-        };
-      })
-    );
-
-    const product = new Product({
-      name,
-      description,
-      categoryId: category,
-      colors: colorVariants
-    });
-
-    await product.save();
-
-    res.status(201).json({ success: true, message: "Product created", data: product });
-
-  }  catch (err) {
-  console.error("CREATE ERROR:", err); // <- print full error
-  res.status(500).json({
-    success: false,
-    message: "Internal Server Error",
-    error: err.message || err
-  });
-}
+  } catch (error) {
+    console.error('Create product error:', error);
+    res.status(500).json({ success: false, message: '❌ Failed to create product', error: error.message });
+  }
 };
-
 
 // Get All Products (sorted by position)
 exports.getProducts = async (req, res) => {
   try {
     const products = await Product.find().sort({ position: 1 });
 
+    // Aggregate sum of quantity for each categoryId (string)
     const categoryCounts = await Product.aggregate([
       { $group: { _id: "$categoryId", count: { $sum: "$quantity" } } }
     ]);
-
+    // Convert to a lookup object for quick access
     const categoryCountMap = {};
     categoryCounts.forEach(cat => {
-      categoryCountMap[cat._id.toString()] = cat.count;
+      categoryCountMap[cat._id] = cat.count;
     });
 
     const result = products.map(prod => {
+      // Calculate discounted prices
+      let discountedPrices = [];
+      if (!isNaN(prod.discount) && prod.discount > 0) {
+        discountedPrices = prod.price.map(p =>
+          Number((p - (p * prod.discount / 100)).toFixed(3))
+        );
+      } else {
+        discountedPrices = [...prod.price];
+      }
+
       return {
         _id: prod._id,
         productId: prod.productId,
@@ -120,50 +151,26 @@ exports.getProducts = async (req, res) => {
         description: prod.description,
         modelNumbers: prod.modelNumbers,
         dimensions: prod.dimensions,
+        colors: prod.colors,
+        price: prod.price,
+        discountedPrice: discountedPrices,
         discount: prod.discount,
         available: prod.available,
         position: prod.position,
-        productQuantity: prod.quantity || 0,
-        categoryTotalQuantity: categoryCountMap[prod.categoryId.toString()] || 0,
-
-        // Safely map colors
-        colors: (prod.colors || []).map(color => {
-          const [original = 0, discounted = 0] = color.price || [];
-
-          return {
-            colorName: color.colorName,
-            price: {
-              original,
-              discounted
-            },
-            images: (color.images || []).map(img => ({
-              url: img.url,
-              public_id: img.public_id
-            }))
-          };
-        }),
-
-        models: (prod.models || []).map(model => ({
-          url: model.url,
-          public_id: model.public_id,
-          format: model.format
-        }))
+        images: prod.images.map(img => ({
+          url: img.url,
+          public_id: img.public_id
+        })),
+        productQuantity: prod.quantity || 0, // Each product's quantity
+        categoryTotalQuantity: categoryCountMap[prod.categoryId] || 0 // Total quantity for this category
       };
     });
 
     res.status(200).json({ success: true, products: result });
-
   } catch (error) {
-    console.error('❌ Error in getProducts:', error);
-    res.status(500).json({
-      success: false,
-      message: '❌ Failed to fetch products',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: '❌ Failed to fetch products', error: error.message });
   }
 };
-
-
 
 
 // Get Product by Unique ID
@@ -289,4 +296,3 @@ exports.toggleProductAvailability = async (req, res) => {
     res.status(500).json({ success: false, message: '❌ Failed to toggle availability', error: error.message });
   }
 };
-//push code deleted
