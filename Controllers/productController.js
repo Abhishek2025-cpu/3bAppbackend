@@ -32,55 +32,77 @@ exports.createProduct = async (req, res) => {
       description,
       modelNumbers,
       dimensions,
-      colors,
-      price,
       discount,
       available,
       quantity,
       position
     } = req.body;
 
-    // 🔍 Find the category by its string ID
     const category = await Category.findOne({ categoryId });
     if (!category) return res.status(400).json({ success: false, message: 'Invalid categoryId provided' });
 
-    // 🖼️ Upload images
-    const uploadedImages = await Promise.all(
-      req.files.map(file =>
-        new Promise((resolve, reject) => {
-          const stream = cloudinary.uploader.upload_stream({ folder: 'products' }, (err, result) => {
-            if (err) return reject(err);
-            resolve({
-              url: result.secure_url,
-              public_id: result.public_id,
-            });
-          });
-          stream.end(file.buffer);
-        })
-      )
-    );
-
-    // Parse price array and discount
-    const priceArr = price.split(',').map(p => Number(p));
-    const discountValue = Number(discount);
-
-    // Calculate discounted prices up to 3 decimal digits
-    let discountedPrices = [];
-    if (!isNaN(discountValue) && discountValue > 0) {
-      discountedPrices = priceArr.map(p =>
-        Number((p - (p * discountValue / 100)).toFixed(3))
-      );
-    } else {
-      discountedPrices = [...priceArr];
+    // Parse colors JSON string from req.body.colors
+    let colorsInput = [];
+    if (req.body.colors) {
+      colorsInput = JSON.parse(req.body.colors);
     }
 
-const objFiles = req.files.filter(file =>
-  path.extname(file.originalname).toLowerCase() === '.obj'
-);
+    // Upload images per color:
+    // This requires you to send images grouped by color in frontend
+    // For example, each file's fieldname includes the colorName so we can filter here
+    // e.g. files: [{fieldname: 'color_Red_0', buffer: ...}, {fieldname: 'color_Blue_0', buffer: ...}]
 
-const uploadedModels = await Promise.all(
-  objFiles.map(file => uploadToGCS(file.buffer, file.originalname, 'models'))
-);
+    // Group files by colorName
+    const filesByColor = {};
+    if (req.files && req.files.length > 0) {
+      req.files.forEach(file => {
+        // extract colorName from fieldname: e.g. "color_Red_0" => "Red"
+        const match = file.fieldname.match(/^color_(.+?)_/);
+        if (match) {
+          const colorName = match[1];
+          if (!filesByColor[colorName]) filesByColor[colorName] = [];
+          filesByColor[colorName].push(file);
+        }
+      });
+    }
+
+    // Upload images for each color
+    const colors = await Promise.all(colorsInput.map(async colorObj => {
+      const colorName = colorObj.colorName;
+
+      const priceArr = colorObj.price.split(',').map(p => Number(p));
+
+      const imagesToUpload = filesByColor[colorName] || [];
+
+      const uploadedImages = await Promise.all(
+        imagesToUpload.map(file =>
+          new Promise((resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream({ folder: `products/colors/${colorName}` }, (err, result) => {
+              if (err) return reject(err);
+              resolve({ url: result.secure_url, public_id: result.public_id });
+            });
+            stream.end(file.buffer);
+          })
+        )
+      );
+
+      return {
+        colorName,
+        price: priceArr,
+        images: uploadedImages
+      };
+    }));
+
+    // Handle modelNumbers, dimensions (comma separated strings to arrays)
+    const modelNums = modelNumbers ? modelNumbers.split(',') : [];
+    const dims = dimensions ? dimensions.split(',') : [];
+
+    // Your other file uploads for models (obj files)
+    const objFiles = req.files.filter(file => path.extname(file.originalname).toLowerCase() === '.obj');
+
+    const uploadedModels = await Promise.all(
+      objFiles.map(file => uploadToGCS(file.buffer, file.originalname, 'models'))
+    );
 
     const newProduct = new Product({
       productId,
@@ -88,15 +110,13 @@ const uploadedModels = await Promise.all(
       models: uploadedModels,
       name,
       description,
-      modelNumbers: modelNumbers ? modelNumbers.split(',') : [],
-      dimensions: dimensions ? dimensions.split(',') : [],
-      colors: colors ? colors.split(',') : [],
-      price: priceArr,
-      discount: discountValue,
+      modelNumbers: modelNums,
+      dimensions: dims,
+      colors, // <-- updated colors array with price and images
+      discount: Number(discount) || 0,
       available: available !== undefined ? available : true,
       position: Number(position) || 0,
-       quantity: quantity !== undefined ? Number(quantity) : 0,
-      images: uploadedImages
+      quantity: Number(quantity) || 0,
     });
 
     await newProduct.save();
@@ -104,11 +124,7 @@ const uploadedModels = await Promise.all(
     res.status(201).json({
       success: true,
       message: '✅ Product created successfully',
-      product: {
-        ...newProduct.toObject(),
-        price: priceArr,
-        discountedPrice: discountedPrices
-      }
+      product: newProduct
     });
 
   } catch (error) {
@@ -116,6 +132,7 @@ const uploadedModels = await Promise.all(
     res.status(500).json({ success: false, message: '❌ Failed to create product', error: error.message });
   }
 };
+
 
 // Get All Products (sorted by position)
 exports.getProducts = async (req, res) => {
