@@ -99,7 +99,6 @@ exports.getProducts = async (req, res) => {
   try {
     const products = await Product.find().sort({ position: 1 });
 
-    // Aggregate total quantity per categoryId
     const categoryCounts = await Product.aggregate([
       { $group: { _id: "$categoryId", count: { $sum: "$quantity" } } }
     ]);
@@ -124,24 +123,24 @@ exports.getProducts = async (req, res) => {
         productQuantity: prod.quantity || 0,
         categoryTotalQuantity: categoryCountMap[prod.categoryId.toString()] || 0,
 
-        // Map colors with original and discounted prices
-        colors: prod.colors.map(color => {
-          const [original, discounted] = color.price;
+        // Safely map colors
+        colors: (prod.colors || []).map(color => {
+          const [original = 0, discounted = 0] = color.price || [];
+
           return {
             colorName: color.colorName,
             price: {
               original,
               discounted
             },
-            images: color.images.map(img => ({
+            images: (color.images || []).map(img => ({
               url: img.url,
               public_id: img.public_id
             }))
           };
         }),
 
-        // Optional: expose 3D models if needed
-        models: prod.models.map(model => ({
+        models: (prod.models || []).map(model => ({
           url: model.url,
           public_id: model.public_id,
           format: model.format
@@ -152,7 +151,7 @@ exports.getProducts = async (req, res) => {
     res.status(200).json({ success: true, products: result });
 
   } catch (error) {
-    console.error('Error fetching products:', error);
+    console.error('❌ Error in getProducts:', error);
     res.status(500).json({
       success: false,
       message: '❌ Failed to fetch products',
@@ -160,6 +159,7 @@ exports.getProducts = async (req, res) => {
     });
   }
 };
+
 
 
 
