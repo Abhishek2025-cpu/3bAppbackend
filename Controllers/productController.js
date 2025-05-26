@@ -85,11 +85,16 @@ exports.createProduct = async (req, res) => {
 
     await product.save();
 
-    res.status(201).json({ success: true, message: "Product created", data: product });
-  } catch (err) {
-    console.error("CREATE ERROR:", err);
-    res.status(500).json({ success: false, message: "Internal Server Error" });
-  }
+ res.status(201).json({ success: true, message: "Product created", data: product });
+} catch (err) {
+  console.error("CREATE ERROR:", err);
+  res.status(500).json({ 
+    success: false, 
+    message: "Internal Server Error", 
+    error: err.message || "Something went wrong" 
+  });
+}
+
 };
 
 
