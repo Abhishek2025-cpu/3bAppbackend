@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const categoryController = require('../Controllers/categoryController');
 const { uploadCat } = require('../middleware/upload');
-
+//category routes 
 router.post('/add-category', uploadCat.array('images'), categoryController.createCategory);
 
 router.get('/get-categories', categoryController.getCategories);
