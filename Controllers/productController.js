@@ -29,15 +29,14 @@ exports.createProduct = async (req, res) => {
 
     let parsedColors;
     try {
-      parsedColors = JSON.parse(colors); // Must be a JSON string
+      parsedColors = JSON.parse(colors);
     } catch {
       return res.status(400).json({ success: false, message: "Invalid colors JSON format" });
     }
 
-    // Group uploaded files by color (e.g. 'color_Red_0')
     const colorImageMap = {};
     (req.files || []).forEach(file => {
-      const match = file.fieldname.match(/^color_(\w+)_\d+$/); // e.g., color_Red_0
+      const match = file.fieldname.match(/^color_(\w+)_\d+$/);
       if (match) {
         const color = match[1];
         if (!colorImageMap[color]) colorImageMap[color] = [];
@@ -79,24 +78,23 @@ exports.createProduct = async (req, res) => {
     const product = new Product({
       name,
       description,
-      category,
-      colorVariants
+      categoryId: category,
+      colors: colorVariants
     });
 
     await product.save();
 
- res.status(201).json({ success: true, message: "Product created", data: product });
-} catch (err) {
-  console.error("CREATE ERROR:", err);
-  res.status(500).json({ 
-    success: false, 
-    message: "Internal Server Error", 
-    error: err.message || "Something went wrong" 
-  });
-}
+    res.status(201).json({ success: true, message: "Product created", data: product });
 
+  } catch (err) {
+    console.error("CREATE ERROR:", err);
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      error: err.message || "Something went wrong"
+    });
+  }
 };
-
 
 
 // Get All Products (sorted by position)
