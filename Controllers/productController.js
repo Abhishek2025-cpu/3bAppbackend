@@ -6,22 +6,19 @@ const path = require('path');
 const { uploadToGCS } = require('../utils/gcsUploader');
 
 
-const uploadObjToCloudinary = (fileBuffer, fileName) => {
+const uploadImageToCloudinary = (fileBuffer, fileName) => {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
-      { folder: 'models', resource_type: 'raw', public_id: fileName },
+      { folder: 'products', public_id: fileName },
       (err, result) => {
         if (err) return reject(err);
-        resolve({
-          url: result.secure_url,
-          public_id: result.public_id,
-          format: result.format
-        });
+        resolve({ url: result.secure_url, public_id: result.public_id });
       }
     );
     stream.end(fileBuffer);
   });
 };
+
 // Create Product
 exports.createProduct = async (req, res) => {
   try {
@@ -40,47 +37,34 @@ exports.createProduct = async (req, res) => {
       position
     } = req.body;
 
-    // 🔍 Find the category by its string ID
-    const category = await Category.findOne({ categoryId });
-    if (!category) return res.status(400).json({ success: false, message: 'Invalid categoryId provided' });
-
-    // 🖼️ Upload images
-    const uploadedImages = await Promise.all(
-      req.files.map(file =>
-        new Promise((resolve, reject) => {
-          const stream = cloudinary.uploader.upload_stream({ folder: 'products' }, (err, result) => {
-            if (err) return reject(err);
-            resolve({
-              url: result.secure_url,
-              public_id: result.public_id,
-            });
-          });
-          stream.end(file.buffer);
-        })
-      )
-    );
-
-    // Parse price array and discount
-    const priceArr = price.split(',').map(p => Number(p));
-    const discountValue = Number(discount);
-
-    // Calculate discounted prices up to 3 decimal digits
-    let discountedPrices = [];
-    if (!isNaN(discountValue) && discountValue > 0) {
-      discountedPrices = priceArr.map(p =>
-        Number((p - (p * discountValue / 100)).toFixed(3))
-      );
-    } else {
-      discountedPrices = [...priceArr];
+    if (!productId || !categoryId || !name || !price) {
+      return res.status(400).json({ success: false, message: '❌ Required fields missing' });
     }
 
-const objFiles = req.files.filter(file =>
-  path.extname(file.originalname).toLowerCase() === '.obj'
-);
+    const category = await Category.findOne({ categoryId });
+    if (!category) {
+      return res.status(400).json({ success: false, message: '❌ Invalid categoryId' });
+    }
 
-const uploadedModels = await Promise.all(
-  objFiles.map(file => uploadToGCS(file.buffer, file.originalname, 'models'))
-);
+    const imageFiles = req.files?.images || [];
+    const modelFiles = req.files?.models || [];
+
+    // Upload image files to Cloudinary
+    const uploadedImages = await Promise.all(
+      imageFiles.map(file => uploadImageToCloudinary(file.buffer, file.originalname))
+    );
+
+    // Upload .obj models to GCS
+    const uploadedModels = await Promise.all(
+      modelFiles.map(file => uploadToGCS(file.buffer, file.originalname, 'models'))
+    );
+
+    // Parse price array and calculate discounted prices
+    const priceArr = price.split(',').map(p => Number(p));
+    const discountValue = Number(discount) || 0;
+    const discountedPrices = priceArr.map(p =>
+      Number((p - (p * discountValue / 100)).toFixed(3))
+    );
 
     const newProduct = new Product({
       productId,
@@ -93,10 +77,11 @@ const uploadedModels = await Promise.all(
       colors: colors ? colors.split(',') : [],
       price: priceArr,
       discount: discountValue,
+      discountedPrice: discountedPrices,
       available: available !== undefined ? available : true,
       position: Number(position) || 0,
-       quantity: quantity !== undefined ? Number(quantity) : 0,
-      images: uploadedImages
+      quantity: quantity !== undefined ? Number(quantity) : 0,
+      images: uploadedImages,
     });
 
     await newProduct.save();
@@ -104,15 +89,10 @@ const uploadedModels = await Promise.all(
     res.status(201).json({
       success: true,
       message: '✅ Product created successfully',
-      product: {
-        ...newProduct.toObject(),
-        price: priceArr,
-        discountedPrice: discountedPrices
-      }
+      product: newProduct
     });
-
   } catch (error) {
-    console.error('Create product error:', error);
+    console.error('❌ Create product error:', error);
     res.status(500).json({ success: false, message: '❌ Failed to create product', error: error.message });
   }
 };
