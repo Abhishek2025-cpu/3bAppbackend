@@ -296,3 +296,4 @@ exports.toggleProductAvailability = async (req, res) => {
     res.status(500).json({ success: false, message: '❌ Failed to toggle availability', error: error.message });
   }
 };
+//push code deleted
