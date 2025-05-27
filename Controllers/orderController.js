@@ -150,14 +150,11 @@ exports.getOrdersByUserId = async (req, res) => {
 
 
 exports.updateProductOrderStatus = async (req, res) => {
+  const { userId } = req.params; // userId in URL path
   const { productOrderId, newStatus } = req.body;
-  const userId = req.params.userId;
 
   if (!productOrderId || !newStatus) {
     return res.status(400).json({ success: false, message: 'productOrderId and newStatus are required.' });
-  }
-  if (!userId) {
-    return res.status(400).json({ success: false, message: 'UserId is required in path parameter.' });
   }
 
   const validStatuses = ['Pending', 'Confirmed', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'];
@@ -166,23 +163,20 @@ exports.updateProductOrderStatus = async (req, res) => {
   }
 
   try {
-    // Find the order belonging to userId which contains the product with _id = productOrderId
-    const order = await Order.findOne({ 
-      userId: userId,
-      'products._id': productOrderId
-    });
+    // Find order by userId AND product with orderId = productOrderId inside products array
+    const order = await Order.findOne({ userId: userId, 'products.orderId': productOrderId });
 
     if (!order) {
       return res.status(404).json({ success: false, message: 'Order or product not found for this user.' });
     }
 
-    // Find the product subdocument by _id
-    const product = order.products.id(productOrderId); // Mongoose method to get subdoc by _id
+    // Find the product inside order.products
+    const product = order.products.find(p => p.orderId === productOrderId);
     if (!product) {
       return res.status(404).json({ success: false, message: 'Product not found in order.' });
     }
 
-    // Update product-level status and tracking
+    // Update status and tracking
     product.currentStatus = newStatus;
     product.tracking.push({ status: newStatus, updatedAt: new Date() });
 
@@ -191,15 +185,17 @@ exports.updateProductOrderStatus = async (req, res) => {
     res.status(200).json({
       success: true,
       message: 'Product order status updated successfully.',
-      productOrderId: product._id,
+      productOrderId: product.orderId,
       currentStatus: product.currentStatus,
       trackingHistory: product.tracking
     });
+
   } catch (error) {
     console.error('Error updating product order status:', error);
     res.status(500).json({ success: false, message: 'Server error updating status.', error: error.message });
   }
 };
+
 
 
 
