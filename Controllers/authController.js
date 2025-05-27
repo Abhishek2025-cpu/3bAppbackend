@@ -2,9 +2,9 @@ const User = require('../models/User');
 
 // POST /signup
 exports.signup = async (req, res) => {
-  const { name, number, email, address } = req.body;
+  const { name, number, email } = req.body;
 
-  if (!name || !number || !email || !address) {
+  if (!name || !number || !email) {
     return res.status(400).json({ message: 'All fields are required' });
   }
 
@@ -27,7 +27,7 @@ exports.signup = async (req, res) => {
       name,
       number,
       email,
-      address,
+
       role: 'client',
       profileImage
     });
@@ -44,7 +44,7 @@ exports.signup = async (req, res) => {
 
 exports.updateUser = async (req, res) => {
   const { userId } = req.params;
-  const { name, number, email, address } = req.body;
+  const { name, number, email } = req.body;
 
   try {
     const user = await User.findById(userId);
@@ -54,7 +54,7 @@ exports.updateUser = async (req, res) => {
     if (name) user.name = name;
     if (number) user.number = number;
     if (email) user.email = email;
-    if (address) user.address = address;
+
 
     if (req.file) {
       const base64 = req.file.buffer.toString('base64');

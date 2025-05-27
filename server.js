@@ -5,6 +5,7 @@ const authRoutes = require('./routes/authRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const productRoutes = require('./routes/productRoutes');
 const feedbackRoutes = require('./routes/feedbackRoutes');
+const shippingAddressRoutes = require('./routes/shippingAddressRoutes');
 
 const orderRoutes = require('./routes/orderRoutes');
 const path = require('path');
@@ -34,6 +35,9 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/feedback', feedbackRoutes);
+
+app.use('/api', shippingAddressRoutes);
+
 
 // Default route
 app.get('/', (req, res) => res.send('API is running...'));

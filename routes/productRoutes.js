@@ -4,6 +4,7 @@ const router = express.Router();
 const productController = require('../Controllers/productController');
 const { uploadProduct } = require('../middleware/upload');
 
+
 router.post(
   '/add-products',
   uploadProduct.fields([
