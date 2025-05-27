@@ -59,6 +59,7 @@ exports.addToCart = async (req, res) => {
 
 
 // Remove multiple items from cart
+// Remove multiple items from cart
 exports.removeFromCart = async (req, res) => {
   try {
     const { userId, productIds } = req.body;
@@ -67,18 +68,14 @@ exports.removeFromCart = async (req, res) => {
       return res.status(400).json({ success: false, message: 'UserId and productIds array required' });
     }
 
-    const cart = await Cart.findOne({ userId });
-    if (!cart) {
-      return res.status(404).json({ success: false, message: 'Cart not found' });
-    }
+    let cart = await Cart.findOne({ userId });
+    if (!cart) return res.status(404).json({ success: false, message: 'Cart not found' });
 
-    // Filter out items with productIds to remove
     cart.items = cart.items.filter(item => !productIds.includes(item.product.toString()));
 
     await cart.save();
 
     res.status(200).json({ success: true, message: 'Items removed from cart', cart });
-
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to remove from cart', error: error.message });
   }
