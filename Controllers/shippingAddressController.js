@@ -70,3 +70,25 @@ exports.deleteAddress = async (req, res) => {
     res.status(500).json({ message: 'Failed to delete address', error: err.message });
   }
 };
+
+
+
+// GET /api/user/:userId/addresses
+exports.getShippingAddresses = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const userProfile = await UserProfile.findOne({ userId });
+
+    if (!userProfile) {
+      return res.status(404).json({ message: 'User profile not found' });
+    }
+
+    res.status(200).json({
+      message: 'Shipping addresses fetched successfully',
+      shippingAddresses: userProfile.shippingAddresses
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch shipping addresses', error: error.message });
+  }
+};
