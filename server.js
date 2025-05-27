@@ -5,6 +5,7 @@ const authRoutes = require('./routes/authRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const productRoutes = require('./routes/productRoutes');
 const feedbackRoutes = require('./routes/feedbackRoutes');
+const cartFavoriteRoutes = require('./routes/cartFavoriteRoutes');
 const shippingAddressRoutes = require('./routes/shippingAddressRoutes');
 
 const orderRoutes = require('./routes/orderRoutes');
@@ -37,6 +38,9 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/feedback', feedbackRoutes);
 
 app.use('/api', shippingAddressRoutes);
+
+app.use('/api', cartFavoriteRoutes);
+
 
 
 // Default route
