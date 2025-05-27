@@ -12,22 +12,27 @@ const generateOrderId = () => {
 
 exports.placeOrder = async (req, res) => {
   try {
-    const { userId, items } = req.body;
+    const { userId, shippingAddressId, items } = req.body;
 
-    // 1. Fetch user profile for address
+    // 1. Get User and selected shipping address
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-    const shippingAddress = user.address; // assumed structure is correct
+    const shippingAddress = user.shippingAddresses.id(shippingAddressId);
+    if (!shippingAddress) {
+      return res.status(404).json({ success: false, message: 'Shipping address not found' });
+    }
 
     // 2. Process items and deduct stock
     const products = await Promise.all(
       items.map(async item => {
         const product = await Product.findById(item.productId);
         if (!product) throw new Error('Product not found');
-        if (product.quantity < item.quantity) throw new Error(`Insufficient stock for product: ${product.name}`);
 
-        // Deduct quantity
+        if (product.quantity < item.quantity) {
+          throw new Error(`Insufficient stock for product: ${product.name}`);
+        }
+
         product.quantity -= item.quantity;
         if (product.quantity <= 0) {
           product.quantity = 0;
@@ -35,14 +40,11 @@ exports.placeOrder = async (req, res) => {
         }
         await product.save();
 
-        // Get selected color (assumed stored in item.color or product data)
-        const selectedColor = item.color || product.defaultColor || 'Not specified';
-
         return {
           productId: product._id,
           quantity: item.quantity,
-          color: selectedColor,
-          priceAtPurchase: product.price[0],
+          color: item.color || 'Not specified',
+          priceAtPurchase: item.price, // 💡 Trusting frontend-provided price
           orderId: generateOrderId()
         };
       })
@@ -52,7 +54,12 @@ exports.placeOrder = async (req, res) => {
     const newOrder = new Order({
       userId,
       products,
-      shippingDetails: shippingAddress,
+      shippingDetails: {
+        name: shippingAddress.name,
+        phone: shippingAddress.phone,
+        addressType: shippingAddress.addressType,
+        detailedAddress: shippingAddress.detailedAddress
+      },
       orderId: generateOrderId(),
       currentStatus: "Pending",
       tracking: [{
@@ -63,13 +70,22 @@ exports.placeOrder = async (req, res) => {
 
     await newOrder.save();
 
-    res.status(201).json({ success: true, message: "Order placed successfully", order: newOrder });
+    res.status(201).json({
+      success: true,
+      message: "Order placed successfully",
+      order: newOrder
+    });
 
   } catch (error) {
     console.error('Error placing order:', error);
-    res.status(500).json({ success: false, message: 'Server error placing order.', error: error.message });
+    res.status(500).json({
+      success: false,
+      message: 'Server error placing order.',
+      error: error.message
+    });
   }
 };
+
 
 
 
@@ -77,20 +93,26 @@ exports.placeOrder = async (req, res) => {
 exports.getOrders = async (req, res) => {
   try {
     const orders = await Order.find()
-      .sort({ createdAt: -1 }) // latest orders first
-      .populate('userId', 'name email phone')
+      .sort({ createdAt: -1 })
+      .populate('userId', 'name email number') // Include phone number
       .populate('products.productId', 'name price dimensions discount');
+
+    const formattedOrders = orders.map(order => ({
+      ...order.toObject(),
+      totalAmount: order.products.reduce((sum, item) => sum + (item.priceAtPurchase * item.quantity), 0)
+    }));
 
     res.status(200).json({
       success: true,
-      count: orders.length,
-      orders
+      count: formattedOrders.length,
+      orders: formattedOrders
     });
   } catch (error) {
     console.error('Error fetching orders:', error);
     res.status(500).json({ success: false, message: 'Server error fetching orders.', error: error.message });
   }
 };
+
 
 
 
@@ -102,23 +124,29 @@ exports.getOrdersByUserId = async (req, res) => {
   try {
     const orders = await Order.find({ userId })
       .sort({ createdAt: -1 })
-      .populate('userId', 'name email phone')
+      .populate('userId', 'name email number')
       .populate('products.productId', 'name price dimensions discount');
 
     if (!orders.length) {
       return res.status(404).json({ success: false, message: 'No orders found for this user.' });
     }
 
+    const formattedOrders = orders.map(order => ({
+      ...order.toObject(),
+      totalAmount: order.products.reduce((sum, item) => sum + (item.priceAtPurchase * item.quantity), 0)
+    }));
+
     res.status(200).json({
       success: true,
-      count: orders.length,
-      orders
+      count: formattedOrders.length,
+      orders: formattedOrders
     });
   } catch (error) {
     console.error('Error fetching user orders:', error);
     res.status(500).json({ success: false, message: 'Server error fetching user orders.', error: error.message });
   }
 };
+
 
 
 exports.updateProductOrderStatus = async (req, res) => {
