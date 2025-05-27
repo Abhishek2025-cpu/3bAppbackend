@@ -181,37 +181,80 @@ exports.getProducts = async (req, res) => {
 
 
 // Get Product by Unique ID
-exports.getProductById = async (req, res) => {
+exports.getProducts = async (req, res) => {
   try {
-    const { productId } = req.params;
-    const product = await Product.findOne({ productId });
+    const products = await Product.find().sort({ position: 1 });
 
-    if (!product) {
-      return res.status(404).json({ success: false, message: '❌ Product not found' });
-    }
+    // Aggregate sum of quantity for each categoryId (string)
+    const categoryCounts = await Product.aggregate([
+      { $group: { _id: "$categoryId", count: { $sum: "$quantity" } } }
+    ]);
 
-    res.status(200).json({
-      success: true,
-      product: {
-        productId: product.productId,
-        categoryId: product.categoryId,
-        name: product.name,
-        description: product.description,
-        modelNumbers: product.modelNumbers,
-        dimensions: product.dimensions,
-        colors: product.colors,
-        price: product.price,
-        discount: product.discount,
-        available: product.available,
-        position: product.position,
-        images: product.images
-      }
+    // Convert to a lookup object for quick access
+    const categoryCountMap = {};
+    categoryCounts.forEach(cat => {
+      categoryCountMap[cat._id] = cat.count;
     });
 
+    const result = products.map(prod => {
+      // Calculate global discounted prices
+      let discountedPrices = [];
+      if (!isNaN(prod.discount) && prod.discount > 0) {
+        discountedPrices = prod.price.map(p =>
+          Number((p - (p * prod.discount / 100)).toFixed(3))
+        );
+      } else {
+        discountedPrices = [...prod.price];
+      }
+
+      // Apply discount to colorPrice items if applicable
+      const discountedColorPrice = (prod.colorPrice || []).map(cp => {
+        const discounted = !isNaN(prod.discount) && prod.discount > 0
+          ? Number((cp.price - (cp.price * prod.discount / 100)).toFixed(3))
+          : cp.price;
+
+        return {
+          color: cp.color,
+          originalPrice: cp.price,
+          discountedPrice: discounted
+        };
+      });
+
+      return {
+        _id: prod._id,
+        productId: prod.productId,
+        categoryId: prod.categoryId,
+        name: prod.name,
+        description: prod.description,
+        modelNumbers: prod.modelNumbers,
+        dimensions: prod.dimensions,
+        colors: prod.colors,
+        price: prod.price,
+        discountedPrice: discountedPrices,
+        colorPrice: discountedColorPrice,
+        colorImages: prod.colorImages || [],
+        discount: prod.discount,
+        available: prod.available,
+        position: prod.position,
+        images: prod.images.map(img => ({
+          url: img.url,
+          public_id: img.public_id
+        })),
+        productQuantity: prod.quantity || 0,
+        categoryTotalQuantity: categoryCountMap[prod.categoryId] || 0
+      };
+    });
+
+    res.status(200).json({ success: true, products: result });
   } catch (error) {
-    res.status(500).json({ success: false, message: '❌ Failed to fetch product', error: error.message });
+    res.status(500).json({
+      success: false,
+      message: '❌ Failed to fetch products',
+      error: error.message
+    });
   }
 };
+
 
 // Update Product (with image replacement)
 exports.updateProduct = async (req, res) => {
@@ -301,5 +344,61 @@ exports.toggleProductAvailability = async (req, res) => {
   } catch (error) {
     console.error('Toggle availability error:', error);
     res.status(500).json({ success: false, message: '❌ Failed to toggle availability', error: error.message });
+  }
+};
+
+
+exports.getProductById = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const product = await Product.findOne({ productId });
+
+    if (!product) {
+      return res.status(404).json({ success: false, message: '❌ Product not found' });
+    }
+
+    const discountedPrices = (!isNaN(product.discount) && product.discount > 0)
+      ? product.price.map(p => Number((p - (p * product.discount / 100)).toFixed(3)))
+      : [...product.price];
+
+    const discountedColorPrice = (product.colorPrice || []).map(cp => {
+      const discounted = !isNaN(product.discount) && product.discount > 0
+        ? Number((cp.price - (cp.price * product.discount / 100)).toFixed(3))
+        : cp.price;
+
+      return {
+        color: cp.color,
+        originalPrice: cp.price,
+        discountedPrice: discounted
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      product: {
+        productId: product.productId,
+        categoryId: product.categoryId,
+        name: product.name,
+        description: product.description,
+        modelNumbers: product.modelNumbers,
+        dimensions: product.dimensions,
+        colors: product.colors,
+        price: product.price,
+        discountedPrice: discountedPrices,
+        colorPrice: discountedColorPrice,
+        colorImages: product.colorImages || [],
+        discount: product.discount,
+        available: product.available,
+        position: product.position,
+        images: product.images
+      }
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: '❌ Failed to fetch product',
+      error: error.message
+    });
   }
 };

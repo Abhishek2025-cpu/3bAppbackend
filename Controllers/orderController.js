@@ -12,36 +12,48 @@ const generateOrderId = () => {
 
 exports.placeOrder = async (req, res) => {
   try {
-    const { userId, items, shippingAddresses } = req.body;
+    const { userId, items } = req.body;
 
-// In orderController.js, inside placeOrder
-const products = await Promise.all(
-  items.map(async item => {
-    const product = await Product.findById(item.productId);
-    if (!product) throw new Error('Product not found');
-    if (product.quantity < item.quantity) throw new Error(`Insufficient stock for product: ${product.name}`);
+    // 1. Fetch user profile for address
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-    // Deduct the ordered quantity
-    product.quantity -= item.quantity;
-    if (product.quantity <= 0) {
-      product.quantity = 0;
-      product.available = false;
-    }
-    await product.save();
+    const shippingAddress = user.address; // assumed structure is correct
 
-    return {
-      productId: product._id,
-      quantity: item.quantity,
-      priceAtPurchase: product.price[0],
-      orderId: generateOrderId()
-    };
-  })
-);
+    // 2. Process items and deduct stock
+    const products = await Promise.all(
+      items.map(async item => {
+        const product = await Product.findById(item.productId);
+        if (!product) throw new Error('Product not found');
+        if (product.quantity < item.quantity) throw new Error(`Insufficient stock for product: ${product.name}`);
+
+        // Deduct quantity
+        product.quantity -= item.quantity;
+        if (product.quantity <= 0) {
+          product.quantity = 0;
+          product.available = false;
+        }
+        await product.save();
+
+        // Get selected color (assumed stored in item.color or product data)
+        const selectedColor = item.color || product.defaultColor || 'Not specified';
+
+        return {
+          productId: product._id,
+          quantity: item.quantity,
+          color: selectedColor,
+          priceAtPurchase: product.price[0],
+          orderId: generateOrderId()
+        };
+      })
+    );
+
+    // 3. Create new order
     const newOrder = new Order({
       userId,
       products,
-      shippingDetails: shippingAddresses,
-      orderId: generateOrderId(), // ensure this is not null and unique
+      shippingDetails: shippingAddress,
+      orderId: generateOrderId(),
       currentStatus: "Pending",
       tracking: [{
         status: "Pending",
@@ -58,6 +70,7 @@ const products = await Promise.all(
     res.status(500).json({ success: false, message: 'Server error placing order.', error: error.message });
   }
 };
+
 
 
 

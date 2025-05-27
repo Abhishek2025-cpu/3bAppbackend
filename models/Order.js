@@ -27,9 +27,10 @@ const shippingSchema = new mongoose.Schema({
 
 const orderedProductSchema = new mongoose.Schema({
   productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
-  orderId: { type: String, required: true }, // unique per product
+  orderId: { type: String, required: true },
   quantity: { type: Number, required: true },
   priceAtPurchase: { type: Number, required: true },
+  color: { type: String }, // ✅ NEW: selected color by user
   currentStatus: {
     type: String,
     enum: ['Pending', 'Confirmed', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'],
@@ -37,6 +38,7 @@ const orderedProductSchema = new mongoose.Schema({
   },
   tracking: [trackingSchema]
 });
+
 
 const orderSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
