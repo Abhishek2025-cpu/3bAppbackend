@@ -20,10 +20,7 @@ const uploadImageToCloudinary = (fileBuffer, fileName) => {
 };
 
 
-// controllers/productController.js
-const Product = require('../models/Product');
-const Category = require('../models/Category');
-const { uploadImageToCloudinary } = require('../utils/cloudinary'); // Replace with your actual uploader
+
 
 exports.createProduct = async (req, res) => {
   try {
