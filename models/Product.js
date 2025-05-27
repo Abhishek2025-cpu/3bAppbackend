@@ -1,3 +1,4 @@
+// models/Product.js
 const mongoose = require('mongoose');
 
 const productSchema = new mongoose.Schema({
@@ -17,11 +18,19 @@ const productSchema = new mongoose.Schema({
   discountedPrice: [Number],
   colorPrice: [{
     color: String,
-    price: Number
+    price: Number,
+    image: {
+      url: String,
+      public_id: String
+    }
   }],
   discountedColorPrice: [{
     color: String,
-    price: Number
+    price: Number,
+    image: {
+      url: String,
+      public_id: String
+    }
   }],
   available: { type: Boolean, default: true },
   quantity: { type: Number, required: true, default: 0 },

@@ -19,7 +19,12 @@ const uploadImageToCloudinary = (fileBuffer, fileName) => {
   });
 };
 
-// Create Product
+
+// controllers/productController.js
+const Product = require('../models/Product');
+const Category = require('../models/Category');
+const { uploadImageToCloudinary } = require('../utils/cloudinary'); // Replace with your actual uploader
+
 exports.createProduct = async (req, res) => {
   try {
     const {
@@ -35,7 +40,7 @@ exports.createProduct = async (req, res) => {
       available,
       quantity,
       position,
-      colorPrice // <-- New field from req.body
+      colorPrice // expecting a JSON string
     } = req.body;
 
     if (!productId || !categoryId || !name || !price) {
@@ -48,30 +53,42 @@ exports.createProduct = async (req, res) => {
     }
 
     const imageFiles = req.files?.images || [];
+    const colorImages = req.files?.colorImages || []; // Optional input field named "colorImages"
 
-    // Upload image files to Cloudinary
+    // Upload main images
     const uploadedImages = await Promise.all(
       imageFiles.map(file => uploadImageToCloudinary(file.buffer, file.originalname))
     );
 
+    // Parse base price and calculate discounts
     const priceArr = price.split(',').map(p => Number(p));
     const discountValue = Number(discount) || 0;
     const discountedPrices = priceArr.map(p =>
-      Number((p - (p * discountValue / 100)).toFixed(3))
+      Number((p - (p * discountValue / 100)).toFixed(2))
     );
 
-    // Parse colorPrice JSON string
+    // Parse colorPrice JSON
     let parsedColorPrice = [];
     let discountedColorPrice = [];
+
     if (colorPrice) {
-      try {
-        parsedColorPrice = JSON.parse(colorPrice); // Must be sent as stringified JSON in form-data
-        discountedColorPrice = parsedColorPrice.map(item => ({
-          color: item.color,
-          price: Number((item.price - (item.price * discountValue / 100)).toFixed(3))
-        }));
-      } catch (e) {
-        return res.status(400).json({ success: false, message: '❌ Invalid colorPrice format' });
+      const colorPriceArr = JSON.parse(colorPrice);
+
+      for (let i = 0; i < colorPriceArr.length; i++) {
+        const { color, price } = colorPriceArr[i];
+        let image = null;
+
+        // Upload corresponding color image if provided
+        if (colorImages && colorImages[i]) {
+          image = await uploadImageToCloudinary(colorImages[i].buffer, colorImages[i].originalname);
+        }
+
+        parsedColorPrice.push({ color, price: Number(price), image });
+        discountedColorPrice.push({
+          color,
+          price: Number((price - (price * discountValue / 100)).toFixed(2)),
+          image
+        });
       }
     }
 
@@ -86,12 +103,12 @@ exports.createProduct = async (req, res) => {
       price: priceArr,
       discount: discountValue,
       discountedPrice: discountedPrices,
-      colorPrice: parsedColorPrice,
-      discountedColorPrice,
       available: available !== undefined ? available : true,
       position: Number(position) || 0,
       quantity: quantity !== undefined ? Number(quantity) : 0,
-      images: uploadedImages
+      images: uploadedImages,
+      colorPrice: parsedColorPrice,
+      discountedColorPrice
     });
 
     await newProduct.save();
@@ -101,12 +118,13 @@ exports.createProduct = async (req, res) => {
       message: '✅ Product created successfully',
       product: newProduct
     });
-
   } catch (error) {
     console.error('❌ Create product error:', error);
     res.status(500).json({ success: false, message: '❌ Failed to create product', error: error.message });
   }
 };
+
+
 
 
 // Get All Products (sorted by position)
