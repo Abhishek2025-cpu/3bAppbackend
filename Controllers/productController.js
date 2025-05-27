@@ -34,7 +34,8 @@ exports.createProduct = async (req, res) => {
       discount,
       available,
       quantity,
-      position
+      position,
+      colorPrice // <-- New field from req.body
     } = req.body;
 
     if (!productId || !categoryId || !name || !price) {
@@ -48,24 +49,35 @@ exports.createProduct = async (req, res) => {
 
     const imageFiles = req.files?.images || [];
 
-
     // Upload image files to Cloudinary
     const uploadedImages = await Promise.all(
       imageFiles.map(file => uploadImageToCloudinary(file.buffer, file.originalname))
     );
 
-
-    // Parse price array and calculate discounted prices
     const priceArr = price.split(',').map(p => Number(p));
     const discountValue = Number(discount) || 0;
     const discountedPrices = priceArr.map(p =>
       Number((p - (p * discountValue / 100)).toFixed(3))
     );
 
+    // Parse colorPrice JSON string
+    let parsedColorPrice = [];
+    let discountedColorPrice = [];
+    if (colorPrice) {
+      try {
+        parsedColorPrice = JSON.parse(colorPrice); // Must be sent as stringified JSON in form-data
+        discountedColorPrice = parsedColorPrice.map(item => ({
+          color: item.color,
+          price: Number((item.price - (item.price * discountValue / 100)).toFixed(3))
+        }));
+      } catch (e) {
+        return res.status(400).json({ success: false, message: '❌ Invalid colorPrice format' });
+      }
+    }
+
     const newProduct = new Product({
       productId,
       categoryId: category._id,
-  
       name,
       description,
       modelNumbers: modelNumbers ? modelNumbers.split(',') : [],
@@ -74,10 +86,12 @@ exports.createProduct = async (req, res) => {
       price: priceArr,
       discount: discountValue,
       discountedPrice: discountedPrices,
+      colorPrice: parsedColorPrice,
+      discountedColorPrice,
       available: available !== undefined ? available : true,
       position: Number(position) || 0,
       quantity: quantity !== undefined ? Number(quantity) : 0,
-      images: uploadedImages,
+      images: uploadedImages
     });
 
     await newProduct.save();
@@ -87,11 +101,13 @@ exports.createProduct = async (req, res) => {
       message: '✅ Product created successfully',
       product: newProduct
     });
+
   } catch (error) {
     console.error('❌ Create product error:', error);
     res.status(500).json({ success: false, message: '❌ Failed to create product', error: error.message });
   }
 };
+
 
 // Get All Products (sorted by position)
 exports.getProducts = async (req, res) => {
