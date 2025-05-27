@@ -14,7 +14,7 @@ const productSchema = new mongoose.Schema({
   colors: [String],
   price: { type: [Number], required: true },
   discount: { type: Number, default: 0 },
-  discountedPrice: [Number], // keep this
+  discountedPrice: [Number],
   colorPrice: [{
     color: String,
     price: Number
@@ -27,3 +27,5 @@ const productSchema = new mongoose.Schema({
   quantity: { type: Number, required: true, default: 0 },
   position: { type: Number, default: 0 }
 }, { timestamps: true });
+
+module.exports = mongoose.model('Product', productSchema);
