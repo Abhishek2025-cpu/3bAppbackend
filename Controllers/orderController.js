@@ -150,10 +150,14 @@ exports.getOrdersByUserId = async (req, res) => {
 
 
 exports.updateProductOrderStatus = async (req, res) => {
-  const { productOrderId, newStatus } = req.body; // renamed orderId => productOrderId for clarity
+  const { productOrderId, newStatus } = req.body;
+  const userId = req.params.userId;
 
   if (!productOrderId || !newStatus) {
     return res.status(400).json({ success: false, message: 'productOrderId and newStatus are required.' });
+  }
+  if (!userId) {
+    return res.status(400).json({ success: false, message: 'UserId is required in path parameter.' });
   }
 
   const validStatuses = ['Pending', 'Confirmed', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'];
@@ -162,20 +166,23 @@ exports.updateProductOrderStatus = async (req, res) => {
   }
 
   try {
-    // Find the order containing the product with productOrderId
-    const order = await Order.findOne({ 'products.orderId': productOrderId });
+    // Find the order belonging to userId which contains the product with _id = productOrderId
+    const order = await Order.findOne({ 
+      userId: userId,
+      'products._id': productOrderId
+    });
 
     if (!order) {
-      return res.status(404).json({ success: false, message: 'Product order not found.' });
+      return res.status(404).json({ success: false, message: 'Order or product not found for this user.' });
     }
 
-    // Find the product subdocument
-    const product = order.products.find(p => p.orderId === productOrderId);
+    // Find the product subdocument by _id
+    const product = order.products.id(productOrderId); // Mongoose method to get subdoc by _id
     if (!product) {
       return res.status(404).json({ success: false, message: 'Product not found in order.' });
     }
 
-    // Update product-level tracking and currentStatus
+    // Update product-level status and tracking
     product.currentStatus = newStatus;
     product.tracking.push({ status: newStatus, updatedAt: new Date() });
 
@@ -184,7 +191,7 @@ exports.updateProductOrderStatus = async (req, res) => {
     res.status(200).json({
       success: true,
       message: 'Product order status updated successfully.',
-      productOrderId: product.orderId,
+      productOrderId: product._id,
       currentStatus: product.currentStatus,
       trackingHistory: product.tracking
     });
