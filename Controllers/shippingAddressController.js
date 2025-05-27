@@ -78,7 +78,7 @@ exports.getShippingAddresses = async (req, res) => {
   const { userId } = req.params;
 
   try {
-    const userProfile = await UserProfile.findOne({ userId });
+    const userProfile = await users.findOne({ userId });
 
     if (!userProfile) {
       return res.status(404).json({ message: 'User profile not found' });
