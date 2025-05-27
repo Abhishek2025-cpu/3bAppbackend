@@ -59,10 +59,9 @@ exports.deleteAddress = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    const address = user.shippingAddresses.id(addressId);
-    if (!address) return res.status(404).json({ message: 'Address not found' });
+    // Remove address by id using pull
+    user.shippingAddresses.pull({ _id: addressId });
 
-    address.remove();
     await user.save();
 
     res.status(200).json({ message: 'Address deleted', addresses: user.shippingAddresses });
@@ -70,6 +69,7 @@ exports.deleteAddress = async (req, res) => {
     res.status(500).json({ message: 'Failed to delete address', error: err.message });
   }
 };
+
 
 
 

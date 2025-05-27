@@ -40,18 +40,6 @@ app.use('/api/feedback', feedbackRoutes);
 app.use('/api', shippingAddressRoutes);
 
 app.use('/api', cartFavoriteRoutes);
-app.post('/remove-from-cart', async (req, res) => {
-  try {
-    const { userId, productIds } = req.body;
-    console.log({ userId, productIds }); // should log your data
-    if (!userId || !productIds) {
-      return res.status(400).json({ success: false, message: 'UserId and productIds required' });
-    }
-    res.json({ success: true, message: 'Test passed' });
-  } catch (e) {
-    res.status(500).json({ success: false, message: e.message });
-  }
-});
 
 
 
