@@ -152,38 +152,52 @@ exports.getOrdersByUserId = async (req, res) => {
 // PATCH /api/orders/update-status/:orderId
 // PATCH /api/orders/status/:id
 exports.updateOrderStatusById = async (req, res) => {
-  const { id } = req.params; // This is the Order document's _id
+  const { id } = req.params;
   const { newStatus } = req.body;
 
-  const validStatuses = ['Pending', 'Confirmed', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'];
-  if (!newStatus || !validStatuses.includes(newStatus)) {
-    return res.status(400).json({ success: false, message: 'Invalid or missing status.' });
+  if (!newStatus) {
+    return res.status(400).json({
+      success: false,
+      message: 'New status is required'
+    });
   }
 
   try {
     const order = await Order.findById(id);
     if (!order) {
-      return res.status(404).json({ success: false, message: 'Order not found.' });
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
     }
 
-    // Update order-level status
+    // Update only the top-level order status
     order.currentStatus = newStatus;
-    order.tracking.push({ status: newStatus, updatedAt: new Date() });
+
+    // Also update currentStatus for each product (if required)
+    if (order.products && order.products.length > 0) {
+      order.products.forEach(product => {
+        product.currentStatus = newStatus;
+      });
+    }
 
     await order.save();
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      message: 'Order status updated successfully.',
-      orderId: order.orderId,
-      currentStatus: order.currentStatus,
-      tracking: order.tracking
+      message: 'Order status updated successfully',
+      currentStatus: order.currentStatus
     });
+
   } catch (error) {
     console.error('Error updating order status:', error);
-    res.status(500).json({ success: false, message: 'Server error updating order.', error: error.message });
+    return res.status(500).json({
+      success: false,
+      message: 'Server error while updating order status'
+    });
   }
 };
+
 
 
 
