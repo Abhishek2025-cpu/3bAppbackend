@@ -149,12 +149,13 @@ exports.getOrdersByUserId = async (req, res) => {
 
 
 
-exports.updateProductOrderStatus = async (req, res) => {
-  const { userId } = req.params; // userId in URL path
-  const { productOrderId, newStatus } = req.body;
+// PATCH /api/orders/update-status/:orderId
+exports.updateProductOrderStatusByProductOrderId = async (req, res) => {
+  const { orderId } = req.params; // product-level orderId
+  const { newStatus } = req.body;
 
-  if (!productOrderId || !newStatus) {
-    return res.status(400).json({ success: false, message: 'productOrderId and newStatus are required.' });
+  if (!newStatus) {
+    return res.status(400).json({ success: false, message: 'newStatus is required.' });
   }
 
   const validStatuses = ['Pending', 'Confirmed', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'];
@@ -163,20 +164,20 @@ exports.updateProductOrderStatus = async (req, res) => {
   }
 
   try {
-    // Find order by userId AND product with orderId = productOrderId inside products array
-    const order = await Order.findOne({ userId: userId, 'products.orderId': productOrderId });
+    // Find the order that contains this product-level orderId
+    const order = await Order.findOne({ 'products.orderId': orderId });
 
     if (!order) {
-      return res.status(404).json({ success: false, message: 'Order or product not found for this user.' });
+      return res.status(404).json({ success: false, message: 'Product order not found.' });
     }
 
-    // Find the product inside order.products
-    const product = order.products.find(p => p.orderId === productOrderId);
+    // Locate the product in the products array
+    const product = order.products.find(p => p.orderId === orderId);
     if (!product) {
-      return res.status(404).json({ success: false, message: 'Product not found in order.' });
+      return res.status(404).json({ success: false, message: 'Product not found in the order.' });
     }
 
-    // Update status and tracking
+    // Update the product status and tracking
     product.currentStatus = newStatus;
     product.tracking.push({ status: newStatus, updatedAt: new Date() });
 
