@@ -150,50 +150,38 @@ exports.getOrdersByUserId = async (req, res) => {
 
 
 // PATCH /api/orders/update-status/:orderId
-exports.updateProductOrderStatusByProductOrderId = async (req, res) => {
-  const { orderId } = req.params; // product-level orderId
+// PATCH /api/orders/status/:id
+exports.updateOrderStatusById = async (req, res) => {
+  const { id } = req.params; // This is the Order document's _id
   const { newStatus } = req.body;
 
-  if (!newStatus) {
-    return res.status(400).json({ success: false, message: 'newStatus is required.' });
-  }
-
   const validStatuses = ['Pending', 'Confirmed', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'];
-  if (!validStatuses.includes(newStatus)) {
-    return res.status(400).json({ success: false, message: 'Invalid status provided.' });
+  if (!newStatus || !validStatuses.includes(newStatus)) {
+    return res.status(400).json({ success: false, message: 'Invalid or missing status.' });
   }
 
   try {
-    // Find the order that contains this product-level orderId
-    const order = await Order.findOne({ 'products.orderId': orderId });
-
+    const order = await Order.findById(id);
     if (!order) {
-      return res.status(404).json({ success: false, message: 'Product order not found.' });
+      return res.status(404).json({ success: false, message: 'Order not found.' });
     }
 
-    // Locate the product in the products array
-    const product = order.products.find(p => p.orderId === orderId);
-    if (!product) {
-      return res.status(404).json({ success: false, message: 'Product not found in the order.' });
-    }
-
-    // Update the product status and tracking
-    product.currentStatus = newStatus;
-    product.tracking.push({ status: newStatus, updatedAt: new Date() });
+    // Update order-level status
+    order.currentStatus = newStatus;
+    order.tracking.push({ status: newStatus, updatedAt: new Date() });
 
     await order.save();
 
     res.status(200).json({
       success: true,
-      message: 'Product order status updated successfully.',
-      productOrderId: product.orderId,
-      currentStatus: product.currentStatus,
-      trackingHistory: product.tracking
+      message: 'Order status updated successfully.',
+      orderId: order.orderId,
+      currentStatus: order.currentStatus,
+      tracking: order.tracking
     });
-
   } catch (error) {
-    console.error('Error updating product order status:', error);
-    res.status(500).json({ success: false, message: 'Server error updating status.', error: error.message });
+    console.error('Error updating order status:', error);
+    res.status(500).json({ success: false, message: 'Server error updating order.', error: error.message });
   }
 };
 
