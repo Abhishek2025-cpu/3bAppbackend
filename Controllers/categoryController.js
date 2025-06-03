@@ -122,30 +122,41 @@ exports.getCategories = async (req, res) => {
 
 exports.updateCategory = async (req, res) => {
   try {
-    const { id } = req.params;  // using _id from URL param
-    const { name, position } = req.body;
+    const { id } = req.params;
+    const { name, position, imagesToRemove } = req.body;
 
     const updateData = {};
     if (name) updateData.name = name;
     if (position !== undefined) updateData.position = Number(position);
 
-    // Find existing category by _id
     const existingCategory = await Category.findById(id);
-
     if (!existingCategory) {
       return res.status(404).json({ message: 'Category not found' });
     }
 
-    // If new images uploaded
-    if (req.files && req.files.length > 0) {
-      // Delete old images from Cloudinary
-      for (const img of existingCategory.images) {
-        if (img.public_id) {
-          await cloudinary.uploader.destroy(img.public_id);
-        }
+    // Parse imagesToRemove from JSON string if needed (because form-data sends it as string)
+    let imagesToRemoveArr = [];
+    if (imagesToRemove) {
+      if (typeof imagesToRemove === 'string') {
+        imagesToRemoveArr = JSON.parse(imagesToRemove);
+      } else {
+        imagesToRemoveArr = imagesToRemove;
       }
+    }
 
-      // Upload new images to Cloudinary
+    // Remove images from Cloudinary & existingCategory.images array
+    if (imagesToRemoveArr.length > 0) {
+      for (const public_id of imagesToRemoveArr) {
+        await cloudinary.uploader.destroy(public_id);
+      }
+      // Filter out removed images from the category's images
+      existingCategory.images = existingCategory.images.filter(
+        img => !imagesToRemoveArr.includes(img.public_id)
+      );
+    }
+
+    // Upload new images if any
+    if (req.files && req.files.length > 0) {
       const uploadImageToCloudinary = (fileBuffer) => {
         return new Promise((resolve, reject) => {
           const stream = cloudinary.uploader.upload_stream(
@@ -166,15 +177,16 @@ exports.updateCategory = async (req, res) => {
         req.files.map(file => uploadImageToCloudinary(file.buffer))
       );
 
-      updateData.images = uploadedImages;
+      // Append new images to existing ones
+      existingCategory.images = [...existingCategory.images, ...uploadedImages];
     }
 
-    // Update category by _id and return updated doc
-    const updatedCategory = await Category.findByIdAndUpdate(
-      id,
-      { $set: updateData },
-      { new: true }
-    );
+    // Update other fields
+    if (updateData.name) existingCategory.name = updateData.name;
+    if (updateData.position !== undefined) existingCategory.position = updateData.position;
+
+    // Save updated category
+    const updatedCategory = await existingCategory.save();
 
     res.status(200).json({
       message: '✅ Category updated successfully',
