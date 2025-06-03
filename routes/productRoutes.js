@@ -21,5 +21,7 @@ router.put('/update-product/:productId', uploadProduct.fields([
  
 ]), productController.updateProduct);
 router.put('/toggle-product/:productId', productController.toggleProductAvailability);
+router.delete('/delete-product/:productId', productController.deleteProduct);
+
 
 module.exports = router;
