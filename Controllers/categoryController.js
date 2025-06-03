@@ -122,20 +122,21 @@ exports.getCategories = async (req, res) => {
 
 exports.updateCategory = async (req, res) => {
   try {
-    const { categoryId } = req.params;
+    const { id } = req.params;  // using _id from URL param
     const { name, position } = req.body;
 
     const updateData = {};
     if (name) updateData.name = name;
     if (position !== undefined) updateData.position = Number(position);
 
-    const existingCategory = await Category.findOne({ categoryId });
+    // Find existing category by _id
+    const existingCategory = await Category.findById(id);
 
     if (!existingCategory) {
       return res.status(404).json({ message: 'Category not found' });
     }
 
-    // If new images are uploaded
+    // If new images uploaded
     if (req.files && req.files.length > 0) {
       // Delete old images from Cloudinary
       for (const img of existingCategory.images) {
@@ -145,33 +146,32 @@ exports.updateCategory = async (req, res) => {
       }
 
       // Upload new images to Cloudinary
+      const uploadImageToCloudinary = (fileBuffer) => {
+        return new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { folder: 'categories', resource_type: 'image' },
+            (err, result) => {
+              if (err) return reject(err);
+              resolve({
+                url: result.secure_url,
+                public_id: result.public_id,
+              });
+            }
+          );
+          stream.end(fileBuffer);
+        });
+      };
+
       const uploadedImages = await Promise.all(
-        req.files.map(file =>
-          cloudinary.uploader.upload_stream({
-            folder: 'categories',
-            resource_type: 'image'
-          }, (error, result) => {
-            if (error) throw error;
-            return {
-              url: result.secure_url,
-              public_id: result.public_id
-            };
-          })
-        ).map(streamUpload => {
-          return new Promise((resolve, reject) => {
-            const stream = streamUpload;
-            const bufferStream = require('streamifier').createReadStream(file.buffer);
-            stream.on('finish', () => resolve(stream));
-            bufferStream.pipe(stream);
-          });
-        })
+        req.files.map(file => uploadImageToCloudinary(file.buffer))
       );
 
       updateData.images = uploadedImages;
     }
 
-    const updatedCategory = await Category.findOneAndUpdate(
-      { categoryId },
+    // Update category by _id and return updated doc
+    const updatedCategory = await Category.findByIdAndUpdate(
+      id,
       { $set: updateData },
       { new: true }
     );
@@ -193,14 +193,26 @@ exports.updateCategory = async (req, res) => {
 };
 
 
+
 // Delete Category by categoryId
 exports.deleteCategory = async (req, res) => {
   try {
-    const { categoryId } = req.params;
-    const deleted = await Category.findOneAndDelete({ categoryId });
+    const { id } = req.params;  // using _id from URL param
+
+    // Find by _id and delete
+    const deleted = await Category.findByIdAndDelete(id);
 
     if (!deleted) {
       return res.status(404).json({ message: 'Category not found' });
+    }
+
+    // Also delete images from Cloudinary if needed
+    if (deleted.images && deleted.images.length > 0) {
+      for (const img of deleted.images) {
+        if (img.public_id) {
+          await cloudinary.uploader.destroy(img.public_id);
+        }
+      }
     }
 
     res.status(200).json({ message: '✅ Category deleted successfully' });
@@ -208,6 +220,7 @@ exports.deleteCategory = async (req, res) => {
     res.status(500).json({ message: '❌ Category deletion failed', error: error.message });
   }
 };
+
 
 
 
