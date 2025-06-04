@@ -1,6 +1,8 @@
 const User = require('../models/User');
 
 // POST /signup
+// controllers/userController.js
+
 exports.signup = async (req, res) => {
   const { name, number, email } = req.body;
 
@@ -27,7 +29,6 @@ exports.signup = async (req, res) => {
       name,
       number,
       email,
-
       role: 'client',
       profileImage
     });
@@ -39,6 +40,7 @@ exports.signup = async (req, res) => {
     res.status(500).json({ message: 'Signup failed', error: error.message });
   }
 };
+
 
 
 
