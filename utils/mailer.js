@@ -1,12 +1,9 @@
-// utils/mailer.js
 const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
-  service: 'gmail', // or 'SendGrid' or custom SMTP
+  service: 'gmail',
   auth: {
-    user: process.env.SMTP_EMAIL, // e.g., your@gmail.com
-    pass: process.env.SMTP_PASSWORD // app password or actual password
+    user: 'abhisheks@pearlorganisation.com',
+    pass: 'exrwrloeisbbypdz' // e.g. abcd efgh ijkl mnop
   }
 });
-
-module.exports = transporter;

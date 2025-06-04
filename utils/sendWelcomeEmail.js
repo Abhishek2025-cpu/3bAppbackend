@@ -3,7 +3,7 @@ const transporter = require('./mailer');
 
 const sendWelcomeEmail = async (to, name = 'User') => {
   const mailOptions = {
-    from: `"3B Profiles App" <${process.env.SMTP_EMAIL}>`,
+    from: `"3B Profiles App" <${`abhisheks@pearlorganisation.com`}>`,
     to,
     subject: 'Welcome to 3B Profiles!',
     html: `
