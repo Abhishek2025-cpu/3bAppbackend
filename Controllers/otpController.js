@@ -6,20 +6,30 @@ const User = require('../models/User');
 const API_KEY = 'ed737417-3faa-11f0-a562-0200cd936042';
 
 // Step 1: Send OTP
-exports.sendOtp = async (req, res) => {
+const axios = require('axios');
+
+exports.sendOTP = async (req, res) => {
   const { number } = req.body;
 
   if (!number) return res.status(400).json({ message: 'Phone number is required' });
 
   try {
-    const response = await axios.get(`https://2factor.in/API/V1/${API_KEY}/SMS/${number}/AUTOGEN`);
-    const sessionId = response.data.Details;
+    const response = await axios.get(`https://2factor.in/API/V1/ed737417-3faa-11f0-a562-0200cd936042/SMS/${number}/AUTOGEN`);
+    
+    if (response.data.Status !== 'Success') {
+      return res.status(500).json({ message: 'Failed to send OTP', error: response.data.Details });
+    }
 
-    res.status(200).json({ message: 'OTP sent successfully', sessionId });
-  } catch (error) {
-    res.status(500).json({ message: 'Failed to send OTP', error: error.message });
+    return res.status(200).json({
+      message: 'OTP sent successfully via SMS',
+      sessionId: response.data.Details
+    });
+
+  } catch (err) {
+    return res.status(500).json({ message: 'Error sending OTP', error: err.message });
   }
 };
+
 
 // Step 2: Verify OTP
 exports.verifyOtp = async (req, res) => {
