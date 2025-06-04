@@ -7,7 +7,7 @@ const otpController = require('../Controllers/otpController');
 router.post('/signup', uploadPrifle.single('profileImage'), signup);
 router.put('/update-user/:userId', uploadPrifle.single('profileImage'), updateUser);
 router.post('/login', login);
-router.post('/send-otp', otpController.sendOTP);//updated 
+router.post('/send-otp', otpController.sendOtp);//updated 
 router.post('/verify-otp', otpController.verifyOtp);
 
 router.get('/get-user-profiles', getUserProfiles);

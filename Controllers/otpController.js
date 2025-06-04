@@ -8,46 +8,44 @@ const API_KEY = 'ed737417-3faa-11f0-a562-0200cd936042';
 // Step 1: Send OTP
 
 
-exports.sendOTP = async (req, res) => {
+exports.sendOtp = async (req, res) => {
   const { number } = req.body;
 
-  if (!number) return res.status(400).json({ message: 'Phone number is required' });
-
   try {
-    const response = await axios.get(`https://2factor.in/API/V1/ed737417-3faa-11f0-a562-0200cd936042/SMS/${number}/AUTOGEN`);
-    
-    if (response.data.Status !== 'Success') {
-      return res.status(500).json({ message: 'Failed to send OTP', error: response.data.Details });
+    const otpRes = await axios.get(
+      `https://2factor.in/API/V1/ed737417-3faa-11f0-a562-0200cd936042/SMS/${number}/AUTOGEN`
+    );
+
+    if (otpRes.data.Status === 'Success') {
+      res.status(200).json({
+        message: 'OTP sent via SMS',
+        sessionId: otpRes.data.Details
+      });
+    } else {
+      res.status(400).json({ message: 'Failed to send OTP', details: otpRes.data });
     }
-
-    return res.status(200).json({
-      message: 'OTP sent successfully via SMS',
-      sessionId: response.data.Details
-    });
-
-  } catch (err) {
-    return res.status(500).json({ message: 'Error sending OTP', error: err.message });
+  } catch (error) {
+    res.status(500).json({ message: 'SMS OTP error', error: error.message });
   }
 };
 
 
 // Step 2: Verify OTP
+// Step 2: Verify OTP
 exports.verifyOtp = async (req, res) => {
-  const { number, otp, sessionId } = req.body;
-
-  if (!number || !otp || !sessionId) {
-    return res.status(400).json({ message: 'Missing number, OTP or session ID' });
-  }
+  const { sessionId, otp } = req.body;
 
   try {
-    const verifyResponse = await axios.get(`https://2factor.in/API/V1/${API_KEY}/SMS/VERIFY/${sessionId}/${otp}`);
+    const verifyRes = await axios.get(
+      `https://2factor.in/API/V1/ed737417-3faa-11f0-a562-0200cd936042/SMS/VERIFY/${sessionId}/${otp}`
+    );
 
-    if (verifyResponse.data.Details === 'OTP Matched') {
-      return res.status(200).json({ message: 'OTP verified successfully' });// time out 
+    if (verifyRes.data.Status === 'Success' && verifyRes.data.Details === 'OTP Matched') {
+      res.status(200).json({ message: 'OTP verified successfully' });
     } else {
-      return res.status(400).json({ message: 'Invalid OTP' });
+      res.status(400).json({ message: 'Invalid OTP', details: verifyRes.data });
     }
   } catch (error) {
-    res.status(500).json({ message: 'OTP verification failed', error: error.message });
+    res.status(500).json({ message: 'OTP verification error', error: error.message });
   }
 };
