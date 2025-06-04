@@ -33,7 +33,7 @@ exports.verifyOtp = async (req, res) => {
     const verifyResponse = await axios.get(`https://2factor.in/API/V1/${API_KEY}/SMS/VERIFY/${sessionId}/${otp}`);
 
     if (verifyResponse.data.Details === 'OTP Matched') {
-      return res.status(200).json({ message: 'OTP verified successfully' });
+      return res.status(200).json({ message: 'OTP verified successfully' });// time out 
     } else {
       return res.status(400).json({ message: 'Invalid OTP' });
     }
