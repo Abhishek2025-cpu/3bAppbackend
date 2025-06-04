@@ -1,9 +1,8 @@
-// utils/sendWelcomeEmail.js
-const transporter = require('./mailer');
+const transporter = require('./mailer'); // This now correctly gets the nodemailer instance
 
 const sendWelcomeEmail = async (to, name = 'User') => {
   const mailOptions = {
-    from: `"3B Profiles App" <${`abhisheks@pearlorganisation.com`}>`,
+    from: `"3B Profiles App" <abhisheks@pearlorganisation.com>`,
     to,
     subject: 'Welcome to 3B Profiles!',
     html: `
@@ -19,7 +18,7 @@ const sendWelcomeEmail = async (to, name = 'User') => {
     `
   };
 
-  await transporter.sendMail(mailOptions);
+  await transporter.sendMail(mailOptions); // <-- This will now work
 };
 
 module.exports = sendWelcomeEmail;
