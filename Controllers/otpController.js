@@ -6,7 +6,7 @@ const User = require('../models/User');
 const API_KEY = 'ed737417-3faa-11f0-a562-0200cd936042';
 
 // Step 1: Send OTP
-const axios = require('axios');
+
 
 exports.sendOTP = async (req, res) => {
   const { number } = req.body;
