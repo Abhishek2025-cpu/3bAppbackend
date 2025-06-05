@@ -8,6 +8,7 @@ const feedbackRoutes = require('./routes/feedbackRoutes');
 const cartFavoriteRoutes = require('./routes/cartFavoriteRoutes');
 const shippingAddressRoutes = require('./routes/shippingAddressRoutes');
 const feedback = require('./routes/feedback');
+const dimensionRoutes = require('./routes/dimensionRoutes');
 
 const orderRoutes = require('./routes/orderRoutes');
 const path = require('path');
@@ -37,6 +38,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/feedback', feedbackRoutes);
+app.use('/api/dimensions', dimensionRoutes);
 
 app.use('/api', shippingAddressRoutes);
 
