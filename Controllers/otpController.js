@@ -1,34 +1,50 @@
 // controllers/otpController.js
 const axios = require('axios');
-const Otp = require('../models/Otp');
 const User = require('../models/User');
 
 const API_KEY = 'ed737417-3faa-11f0-a562-0200cd936042';
-const sendWelcomeEmail = require('../utils/sendWelcomeEmail');
-
-// Step 1: Send OTP
-
 
 exports.sendOtp = async (req, res) => {
   const { number } = req.body;
 
   try {
+    // Check if number already exists in the User collection
+    const existingUser = await User.findOne({ number });
+
+    if (existingUser) {
+      return res.status(400).json({
+        status: false,
+        message: 'Mobile number already registered'
+      });
+    }
+
+    // Send OTP if number is not already registered
     const otpRes = await axios.get(
-      `https://2factor.in/API/V1/ed737417-3faa-11f0-a562-0200cd936042/SMS/${number}/AUTOGEN`
+      `https://2factor.in/API/V1/${API_KEY}/SMS/${number}/AUTOGEN`
     );
 
     if (otpRes.data.Status === 'Success') {
-      res.status(200).json({
+      return res.status(200).json({
+        status: true,
         message: 'OTP sent via SMS',
         sessionId: otpRes.data.Details
       });
     } else {
-      res.status(400).json({ message: 'Failed to send OTP', details: otpRes.data });
+      return res.status(400).json({
+        status: false,
+        message: 'Failed to send OTP',
+        details: otpRes.data
+      });
     }
   } catch (error) {
-    res.status(500).json({ message: 'SMS OTP error', error: error.message });
+    return res.status(500).json({
+      status: false,
+      message: 'Internal server error while sending OTP',
+      error: error.message
+    });
   }
 };
+
 
 
 // Step 2: Verify OTP
