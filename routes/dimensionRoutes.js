@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const Dimension = require('../models/Dimension');
-
+//fetch
 // GET all dimensions
 router.get('/get-dimensions', async (req, res) => {
   try {
