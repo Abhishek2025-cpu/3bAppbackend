@@ -5,20 +5,28 @@ const User = require('../models/User');
 const API_KEY = 'ed737417-3faa-11f0-a562-0200cd936042';
 
 exports.sendOtp = async (req, res) => {
-  const { number } = req.body;
+  const { number, email } = req.body;
 
   try {
-    // Check if number already exists in the User collection
-    const existingUser = await User.findOne({ number });
-
-    if (existingUser) {
+    // Check if mobile number already exists
+    const existingNumber = await User.findOne({ number });
+    if (existingNumber) {
       return res.status(400).json({
         status: false,
         message: 'Mobile number already registered'
       });
     }
 
-    // Send OTP if number is not already registered
+    // Check if email already exists
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
+      return res.status(400).json({
+        status: false,
+        message: 'Email already registered'
+      });
+    }
+
+    // Send OTP if number and email are not registered
     const otpRes = await axios.get(
       `https://2factor.in/API/V1/${API_KEY}/SMS/${number}/AUTOGEN`
     );
