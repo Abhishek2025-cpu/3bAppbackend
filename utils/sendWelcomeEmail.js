@@ -8,7 +8,7 @@ const sendWelcomeEmail = async (to, name = 'User') => {
     html: `
       <div style="font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4;">
         <div style="max-width: 600px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
-          <h2 style="color: #333;">Welcome to <span style="color: #007bff;">ThreeB</span>, ${name}!</h2>
+          <h2 style="color: #333;">Welcome to <span style="color: #007bff;">3BProfiles Pvtlt</span>, ${name}!</h2>
           <p>Thank you for verifying your mobile number and email address.</p>
           <p>We're excited to have you on board. You can now start exploring all the features we offer.</p>
           <hr />
