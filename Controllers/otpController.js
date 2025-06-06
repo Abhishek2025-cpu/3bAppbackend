@@ -1,7 +1,8 @@
 // controllers/otpController.js
 const axios = require('axios');
 const User = require('../models/User');
-const { sendWelcomeEmail } = require('../utils/sendWelcomeEmail');
+const sendWelcomeEmail = require('../utils/sendWelcomeEmail'); // ✅ CORRECT
+
 
 
 const API_KEY = 'ed737417-3faa-11f0-a562-0200cd936042';
@@ -56,8 +57,6 @@ exports.sendOtp = async (req, res) => {
 };
 
 
-
-// Step 2: Verify OTP
 // Step 2: Verify OTP
 exports.verifyOtp = async (req, res) => {
   const { sessionId, otp, email } = req.body;
