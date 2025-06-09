@@ -1,10 +1,8 @@
 const multer = require('multer');
 const path = require('path');
 
-// Memory storage for direct buffer uploads (to GCS/Cloudinary/etc.)
 const storage = multer.memoryStorage();
 
-// File filter for images and .obj files
 const fileFilter = (req, file, cb) => {
   const allowedTypes = [
     'image/jpeg',
@@ -12,7 +10,7 @@ const fileFilter = (req, file, cb) => {
     'image/jpg',
     'image/webp',
     'model/obj',
-    'application/octet-stream' // Sometimes used for .obj
+    'application/octet-stream'
   ];
 
   const ext = path.extname(file.originalname).toLowerCase();
@@ -24,16 +22,26 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// Set file size limit to 100MB
 const limits = { fileSize: 100 * 1024 * 1024 };
 
-// Create separate multer uploaders if needed per route/type
+// ✅ Accept 'images' and 'colorImages' fields as arrays
+const uploadProduct = multer({ storage, fileFilter, limits }).fields([
+  { name: 'images', maxCount: 10 },
+  { name: 'colorImages', maxCount: 10 }
+]);
+
 const uploadCat = multer({ storage, fileFilter, limits });
-const uploadProduct = multer({ storage, fileFilter, limits });
-const uploadPrifle = multer({ storage, fileFilter, limits }); // typo fixed: `uploadPrifle` → `uploadProfile`
+const uploadPrifle = multer({ storage, fileFilter, limits });
 
 module.exports = {
   uploadCat,
   uploadProduct,
-  uploadPrifle
+uploadPrifle
 };
+
+
+
+
+
+
+// uploadPrifle
