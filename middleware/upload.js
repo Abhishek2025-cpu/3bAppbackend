@@ -30,10 +30,10 @@ const limits = { fileSize: 100 * 1024 * 1024 };
 // Create separate multer uploaders if needed per route/type
 const uploadCat = multer({ storage, fileFilter, limits });
 const uploadProduct = multer({ storage, fileFilter, limits });
-const uploadProfile = multer({ storage, fileFilter, limits }); // typo fixed: `uploadPrifle` → `uploadProfile`
+const uploadPrifle = multer({ storage, fileFilter, limits }); // typo fixed: `uploadPrifle` → `uploadProfile`
 
 module.exports = {
   uploadCat,
   uploadProduct,
-  uploadProfile
+  uploadPrifle
 };
