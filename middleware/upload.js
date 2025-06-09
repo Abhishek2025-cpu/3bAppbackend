@@ -1,25 +1,39 @@
 const multer = require('multer');
 const path = require('path');
 
-// Accept any file type (for .obj support)
+// Memory storage for direct buffer uploads (to GCS/Cloudinary/etc.)
 const storage = multer.memoryStorage();
 
+// File filter for images and .obj files
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'model/obj', 'application/octet-stream'];
-  // Accept .obj files by mimetype or extension
-  if (
-    allowedTypes.includes(file.mimetype) ||
-    path.extname(file.originalname).toLowerCase() === '.obj'
-  ) {
+  const allowedTypes = [
+    'image/jpeg',
+    'image/png',
+    'image/jpg',
+    'image/webp',
+    'model/obj',
+    'application/octet-stream' // Sometimes used for .obj
+  ];
+
+  const ext = path.extname(file.originalname).toLowerCase();
+
+  if (allowedTypes.includes(file.mimetype) || ext === '.obj') {
     cb(null, true);
   } else {
-    cb(new Error('Only images and .obj files are allowed!'), false);
+    cb(new Error('❌ Only image and .obj files are allowed!'), false);
   }
 };
-const limits = { fileSize: 100 * 1024 * 1024 }; // 100MB
 
-const uploadCat = multer({ storage, fileFilter,limits });
-const uploadProduct = multer({ storage, fileFilter,limits });
-const uploadPrifle = multer({ storage, fileFilter,limits });
+// Set file size limit to 100MB
+const limits = { fileSize: 100 * 1024 * 1024 };
 
-module.exports = { uploadCat, uploadProduct, uploadPrifle };
+// Create separate multer uploaders if needed per route/type
+const uploadCat = multer({ storage, fileFilter, limits });
+const uploadProduct = multer({ storage, fileFilter, limits });
+const uploadProfile = multer({ storage, fileFilter, limits }); // typo fixed: `uploadPrifle` → `uploadProfile`
+
+module.exports = {
+  uploadCat,
+  uploadProduct,
+  uploadProfile
+};

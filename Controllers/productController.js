@@ -1,26 +1,10 @@
-const Product = require('../models/Product');
-const cloudinary = require('../utils/cloudinary');
-const streamifier = require('streamifier');
-const Category = require('../models/Category');
+
+
 const path = require('path'); 
 
-
-
-const uploadImageToCloudinary = (fileBuffer, fileName) => {
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      { folder: 'products', public_id: fileName },
-      (err, result) => {
-        if (err) return reject(err);
-        resolve({ url: result.secure_url, public_id: result.public_id });
-      }
-    );
-    stream.end(fileBuffer);
-  });
-};
-
-
-
+const Product = require('../models/Product');
+const Category = require('../models/Category');
+const { uploadBufferToGCS } = require('../utils/gcsUploader');
 
 exports.createProduct = async (req, res) => {
   try {
@@ -50,21 +34,34 @@ exports.createProduct = async (req, res) => {
     }
 
     const imageFiles = req.files?.images || [];
-    const colorImages = req.files?.colorImages || []; // Optional input field named "colorImages"
+    const colorImages = req.files?.colorImages || [];
 
-    // Upload main images
+    // ✅ File size validation (limit: 100MB)
+    const limitMB = 100;
+    for (const file of [...imageFiles, ...colorImages]) {
+      if (file.size > limitMB * 1024 * 1024) {
+        return res.status(400).json({
+          success: false,
+          message: `❌ File size exceeds ${limitMB}MB limit: ${file.originalname}`
+        });
+      }
+    }
+
+    // Upload main product images to GCS
     const uploadedImages = await Promise.all(
-      imageFiles.map(file => uploadImageToCloudinary(file.buffer, file.originalname))
+      imageFiles.map(file =>
+        uploadBufferToGCS(file.buffer, file.originalname, 'products')
+      )
     );
 
-    // Parse base price and calculate discounts
+    // Price processing
     const priceArr = price.split(',').map(p => Number(p));
     const discountValue = Number(discount) || 0;
     const discountedPrices = priceArr.map(p =>
       Number((p - (p * discountValue / 100)).toFixed(2))
     );
 
-    // Parse colorPrice JSON
+    // Process colorPrice JSON
     let parsedColorPrice = [];
     let discountedColorPrice = [];
 
@@ -75,9 +72,8 @@ exports.createProduct = async (req, res) => {
         const { color, price } = colorPriceArr[i];
         let image = null;
 
-        // Upload corresponding color image if provided
         if (colorImages && colorImages[i]) {
-          image = await uploadImageToCloudinary(colorImages[i].buffer, colorImages[i].originalname);
+          image = await uploadBufferToGCS(colorImages[i].buffer, colorImages[i].originalname, 'color-images');
         }
 
         parsedColorPrice.push({ color, price: Number(price), image });
@@ -89,6 +85,7 @@ exports.createProduct = async (req, res) => {
       }
     }
 
+    // Create and save the product
     const newProduct = new Product({
       productId,
       categoryId: category._id,
@@ -115,11 +112,13 @@ exports.createProduct = async (req, res) => {
       message: '✅ Product created successfully',
       product: newProduct
     });
+
   } catch (error) {
     console.error('❌ Create product error:', error);
     res.status(500).json({ success: false, message: '❌ Failed to create product', error: error.message });
   }
 };
+
 
 
 

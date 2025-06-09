@@ -5,14 +5,18 @@ const productController = require('../Controllers/productController');
 const { uploadProduct } = require('../middleware/upload');
 
 
-router.post(
-  '/add-products',
+router.post('/add-products', (req, res, next) => {
   uploadProduct.fields([
     { name: 'images', maxCount: 10 },
- 
-  ]),
-  productController.createProduct
-);
+    { name: 'colorImages', maxCount: 10 }
+  ])(req, res, function (err) {
+    if (err instanceof multer.MulterError || err) {
+      return res.status(400).json({ success: false, message: err.message });
+    }
+    next();
+  });
+}, productController.createProduct);
+
 
 router.get('/get-products', productController.getProducts);
 router.get('/get-product/:productId', productController.getProductById);
