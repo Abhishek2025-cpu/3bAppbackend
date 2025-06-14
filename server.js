@@ -46,7 +46,7 @@ app.use('/api', feedback);
 
 
 // Default route
-app.get('/', (req, res) => res.send('API is running...'));
+app.get('/', (req, res) => res.send('API is running...'));//test api 
 
 // Start server
 const PORT = process.env.PORT || 2025;
