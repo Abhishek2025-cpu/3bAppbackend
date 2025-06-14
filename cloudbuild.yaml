@@ -2,21 +2,16 @@ steps:
   - name: 'gcr.io/cloud-builders/npm'
     args: ['install']
 
-  - name: 'gcr.io/cloud-builders/npm'
-    args: ['run', 'build']
-    # If no build script, remove this step
-
   - name: 'gcr.io/cloud-builders/gcloud'
-    args: [
-      'run', 'deploy', '3bAppBackend',
-      '--source=.',
-      '--region=asia-south1',
-      '--platform=managed',
-      '--allow-unauthenticated'
-    ]
-
-images: []
+    args:
+      [
+        'run', 'deploy', 'node-api',           # ✅ change 'node-api' to your desired service name
+        '--source', '.',                       # Deploy from current directory
+        '--region', 'asia-south1',             # ✅ India region
+        '--platform', 'managed',
+        '--allow-unauthenticated',
+        '--entry-point', 'server.js'           # ✅ optional if server.js is your main file
+      ]
 
 options:
   defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
-
