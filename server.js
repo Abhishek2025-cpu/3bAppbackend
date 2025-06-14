@@ -39,9 +39,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/dimensions', dimensionRoutes);
-
 app.use('/api', shippingAddressRoutes);
-
 app.use('/api', cartFavoriteRoutes);
 app.use('/api', feedback);
 

@@ -3,9 +3,11 @@
   "version": "1.0.0",
   "description": "================git push -u origin main",
   "main": "index.js",
+  
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node server.js"
   },
+
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Abhishek2025-cpu/3bClient-App.git"
