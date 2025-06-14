@@ -49,5 +49,9 @@ app.use('/api', feedback);
 app.get('/', (req, res) => res.send('API is running...'));//test api 
 
 // Start server
-const PORT = process.env.PORT || 2025;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+
