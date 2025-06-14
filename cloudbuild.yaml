@@ -5,12 +5,11 @@ steps:
   - name: 'gcr.io/cloud-builders/gcloud'
     args:
       [
-        'run', 'deploy', 'node-api',           # ✅ change 'node-api' to your desired service name
-        '--source', '.',                       # Deploy from current directory
-        '--region', 'asia-south1',             # ✅ India region
+        'run', 'deploy', 'node-api',       # You can change 'node-api' to your desired service name
+        '--source', '.',
+        '--region', 'asia-south1',
         '--platform', 'managed',
-        '--allow-unauthenticated',
-        '--entry-point', 'server.js'           # ✅ optional if server.js is your main file
+        '--allow-unauthenticated'
       ]
 
 options:
