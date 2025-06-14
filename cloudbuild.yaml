@@ -1,0 +1,18 @@
+steps:
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['install']
+
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['run', 'build']
+    # If no build script, remove this step
+
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args: [
+      'run', 'deploy', '3bAppBackend',
+      '--source=.',
+      '--region=asia-south1',
+      '--platform=managed',
+      '--allow-unauthenticated'
+    ]
+
+images: []
