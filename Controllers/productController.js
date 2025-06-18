@@ -109,41 +109,42 @@ exports.createProduct = async (req, res) => {
 
 
     await newProduct.save();
-
-    // ✅ Generate PDF buffer
-    const pdfBuffer = await generateProductPDFBuffer(newProduct);
-
-    // ✅ Upload PDF to GCS
-    const pdfGcsResult = await uploadBufferToGCS(
-      pdfBuffer,
-      `product-pdfs/${newProduct._id}.pdf`,
-      'application/pdf'
-    );
-
-// ✅ Generate QR code as base64 (data:image/png;base64,...)
+// ✅ Generate QR code as base64 with proper prefix
 const qrCodeBase64 = await generateQRCodeBase64(pdfGcsResult.url);
+
+// ✅ Ensure base64 is in correct format
+if (!qrCodeBase64.startsWith('data:image/png;base64,')) {
+  throw new Error('❌ Invalid QR base64 format');
+}
 
 // ✅ Convert base64 to PNG buffer
 const qrBuffer = Buffer.from(qrCodeBase64.split(',')[1], 'base64');
+if (!qrBuffer || qrBuffer.length === 0) {
+  throw new Error('❌ QR buffer is empty');
+}
 
-// ✅ Upload QR code PNG to GCS
+// ✅ Upload to GCS
 const qrUploadResult = await uploadBufferToGCS(
   qrBuffer,
   `product-qrcodes/${newProduct._id}.png`,
   'image/png'
 );
+if (!qrUploadResult?.url) {
+  throw new Error('❌ Failed to upload QR code to GCS');
+}
 
-// ✅ Save PDF and QR code URLs
+// ✅ Save PDF and QR URLs
 newProduct.pdfUrl = pdfGcsResult.url;
 newProduct.qrCodeUrl = qrUploadResult.url;
 await newProduct.save();
+
 
 
     res.status(201).json({
       success: true,
       message: '✅ Product created with QR code',
       product: newProduct,
-      qrCode,
+      // qrCode,
       pdfUrl: pdfGcsResult.url
     });
 
