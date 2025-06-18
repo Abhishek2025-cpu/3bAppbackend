@@ -121,12 +121,22 @@ exports.createProduct = async (req, res) => {
     );
 
     // ✅ Generate QR code with PDF URL
-    const qrCode = await generateQRCodeBase64(pdfGcsResult.url);
+  const qrCodeBase64 = await generateQRCodeBase64(pdfGcsResult.url);
 
-    // ✅ Optionally update product with PDF and QR
-    newProduct.qrCode = qrCode; // base64 image
-    newProduct.pdfUrl = pdfGcsResult.url;
-    await newProduct.save();
+// ✅ Convert base64 to PNG buffer
+const qrBuffer = Buffer.from(qrCodeBase64.split(',')[1], 'base64');
+
+// ✅ Upload QR code image to GCS
+const qrUploadResult = await uploadBufferToGCS(
+  qrBuffer,
+  `product-qrcodes/${newProduct._id}.png`,
+  'image/png'
+);
+
+// ✅ Update product with PDF and QR code URLs
+newProduct.pdfUrl = pdfGcsResult.url;
+newProduct.qrCodeUrl = qrUploadResult.url;
+await newProduct.save();
 
     res.status(201).json({
       success: true,
