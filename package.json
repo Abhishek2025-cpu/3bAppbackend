@@ -3,11 +3,9 @@
   "version": "1.0.0",
   "description": "================git push -u origin main",
   "main": "index.js",
-  
   "scripts": {
     "test": "node server.js"
   },
-
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Abhishek2025-cpu/3bClient-App.git"
@@ -38,6 +36,8 @@
     "nodemailer": "^7.0.3",
     "nodemon": "^3.1.10",
     "path": "^0.12.7",
+    "pdfkit": "^0.17.1",
+    "qrcode": "^1.5.4",
     "streamifier": "^0.1.1"
   }
 }

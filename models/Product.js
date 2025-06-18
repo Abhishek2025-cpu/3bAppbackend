@@ -34,7 +34,11 @@ const productSchema = new mongoose.Schema({
   }],
   available: { type: Boolean, default: true },
   quantity: { type: Number, required: true, default: 0 },
-  position: { type: Number, default: 0 }
-}, { timestamps: true });
+  position: { type: Number, default: 0 },
+  qrCode: String, 
+pdfUrl: String   
+
+},
+ { timestamps: true });
 
 module.exports = mongoose.model('Product', productSchema);

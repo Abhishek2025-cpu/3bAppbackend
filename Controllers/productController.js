@@ -1,4 +1,5 @@
-
+const generateProductPDFBuffer = require('../utils/generateProductPDF');
+const generateQRCodeBase64 = require('../utils/generateQRCode');
 
 const path = require('path'); 
 
@@ -107,10 +108,30 @@ exports.createProduct = async (req, res) => {
 
     await newProduct.save();
 
+    // ✅ Generate PDF buffer
+    const pdfBuffer = await generateProductPDFBuffer(newProduct);
+
+    // ✅ Upload PDF to GCS
+    const pdfGcsResult = await uploadBufferToGCS(
+      pdfBuffer,
+      `product-pdfs/${newProduct._id}.pdf`,
+      'application/pdf'
+    );
+
+    // ✅ Generate QR code with PDF URL
+    const qrCode = await generateQRCodeBase64(pdfGcsResult.url);
+
+    // ✅ Optionally update product with PDF and QR
+    newProduct.qrCode = qrCode; // base64 image
+    newProduct.pdfUrl = pdfGcsResult.url;
+    await newProduct.save();
+
     res.status(201).json({
       success: true,
-      message: '✅ Product created successfully',
-      product: newProduct
+      message: '✅ Product created with QR code',
+      product: newProduct,
+      qrCode,
+      pdfUrl: pdfGcsResult.url
     });
 
   } catch (error) {
