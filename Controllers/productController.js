@@ -109,32 +109,38 @@ exports.createProduct = async (req, res) => {
 
 
     await newProduct.save();
-const QRCode = require('qrcode');
 
-// ✅ Generate QR code as PNG buffer
-const qrBuffer = await QRCode.toBuffer(pdfGcsResult.url, { type: 'png' });
+// Generate QR code as PNG buffer
+const qrBuffer = await QRCode.toBuffer(newProduct.pdfUrl, { type: 'png' });
+console.log("QR Code Buffer Generated:", qrBuffer);
 
-// ✅ Upload QR code PNG to GCS
+// Upload QR code PNG to GCS
 const qrUploadResult = await uploadBufferToGCS(
   qrBuffer,
   `product-qrcodes/${newProduct._id}.png`,
   'image/png'
 );
+console.log("QR Code Upload Result:", qrUploadResult);
 
-// ✅ Save PDF and QR code URLs
+// Save PDF and QR code URLs
 newProduct.pdfUrl = pdfGcsResult.url;
 newProduct.qrCodeUrl = qrUploadResult.url;
 
-await newProduct.save();
+try {
+  await newProduct.save();
+  console.log("Product saved with QR Code URL:", newProduct.qrCodeUrl);
+} catch (error) {
+  console.error("Error saving product:", error);
+}
 
-
-    res.status(201).json({
-      success: true,
-      message: '✅ Product created with QR code',
-      product: newProduct,
-       qrCode,
-      pdfUrl: pdfGcsResult.url
-    });
+// Send response
+res.status(201).json({
+  success: true,
+  message: '✅ Product created with QR code',
+  product: newProduct,
+  qrCodeUrl: newProduct.qrCodeUrl, // Ensure this is the correct field
+  pdfUrl: newProduct.pdfUrl
+});
 
   } catch (error) {
     console.error('❌ Create product error:', error);
