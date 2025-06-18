@@ -151,7 +151,6 @@ exports.getProducts = async (req, res) => {
   try {
     const products = await Product.find().sort({ position: 1 });
 
-    // Aggregate sum of quantity for each categoryId
     const categoryCounts = await Product.aggregate([
       { $group: { _id: "$categoryId", count: { $sum: "$quantity" } } }
     ]);
@@ -162,7 +161,7 @@ exports.getProducts = async (req, res) => {
     });
 
     const result = products.map(prod => {
-      // Calculate discounted prices
+      // Calculate global discounted prices
       let discountedPrices = [];
       if (!isNaN(prod.discount) && prod.discount > 0) {
         discountedPrices = prod.price.map(p =>
@@ -171,6 +170,19 @@ exports.getProducts = async (req, res) => {
       } else {
         discountedPrices = [...prod.price];
       }
+
+      // Apply discount to colorPrice items if applicable
+      const discountedColorPrice = (prod.colorPrice || []).map(cp => {
+        const discounted = !isNaN(prod.discount) && prod.discount > 0
+          ? Number((cp.price - (cp.price * prod.discount / 100)).toFixed(3))
+          : cp.price;
+
+        return {
+          color: cp.color,
+          originalPrice: cp.price,
+          discountedPrice: discounted
+        };
+      });
 
       return {
         _id: prod._id,
@@ -183,6 +195,8 @@ exports.getProducts = async (req, res) => {
         colors: prod.colors,
         price: prod.price,
         discountedPrice: discountedPrices,
+        colorPrice: discountedColorPrice,
+        colorImages: prod.colorImages || [],
         discount: prod.discount,
         available: prod.available,
         position: prod.position,
@@ -190,10 +204,12 @@ exports.getProducts = async (req, res) => {
           url: img.url,
           public_id: img.public_id
         })),
-        pdfUrl: prod.pdfUrl || null,
-        qrCodeUrl: prod.qrCodeUrl || null,
         productQuantity: prod.quantity || 0,
-        categoryTotalQuantity: categoryCountMap[prod.categoryId] || 0
+        categoryTotalQuantity: categoryCountMap[prod.categoryId] || 0,
+
+        // ✅ Include PDF and QR code URLs
+        pdfUrl: prod.pdfUrl || null,
+        qrCodeUrl: prod.qrCodeUrl || null
       };
     });
 
@@ -206,6 +222,7 @@ exports.getProducts = async (req, res) => {
     });
   }
 };
+
 
 
 // Get Product by Unique ID
