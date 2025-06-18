@@ -120,23 +120,24 @@ exports.createProduct = async (req, res) => {
       'application/pdf'
     );
 
-    // ✅ Generate QR code with PDF URL
-  const qrCodeBase64 = await generateQRCodeBase64(pdfGcsResult.url);
+// ✅ Generate QR code as base64 (data:image/png;base64,...)
+const qrCodeBase64 = await generateQRCodeBase64(pdfGcsResult.url);
 
 // ✅ Convert base64 to PNG buffer
 const qrBuffer = Buffer.from(qrCodeBase64.split(',')[1], 'base64');
 
-// ✅ Upload QR code image to GCS
+// ✅ Upload QR code PNG to GCS
 const qrUploadResult = await uploadBufferToGCS(
   qrBuffer,
   `product-qrcodes/${newProduct._id}.png`,
   'image/png'
 );
 
-// ✅ Update product with PDF and QR code URLs
+// ✅ Save PDF and QR code URLs
 newProduct.pdfUrl = pdfGcsResult.url;
 newProduct.qrCodeUrl = qrUploadResult.url;
 await newProduct.save();
+
 
     res.status(201).json({
       success: true,
