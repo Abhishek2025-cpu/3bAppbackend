@@ -21,7 +21,7 @@ exports.createProduct = async (req, res) => {
       price,
       discount,
       available,
-      quantity,
+  
       position,
       colorPrice // expecting a JSON string
     } = req.body;
@@ -96,7 +96,7 @@ exports.createProduct = async (req, res) => {
       discountedPrice: discountedPrices,
       available: typeof available === 'string' ? available.trim().toLowerCase() === 'true' : Boolean(available),
       position: Number(position) || 0,
-      quantity: quantity !== undefined ? Number(quantity) : 0,
+     
       images: uploadedImages,
       colorPrice: parsedColorPrice,
       discountedColorPrice
@@ -199,7 +199,7 @@ exports.getProducts = async (req, res) => {
           url: img.url,
           public_id: img.public_id
         })),
-        productQuantity: prod.quantity || 0,
+     
         categoryTotalQuantity: categoryCountMap[prod.categoryId] || 0,
         pdfUrl: prod.pdfUrl || null,
         qrCodeUrl: prod.qrCodeUrl || null
