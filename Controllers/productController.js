@@ -147,135 +147,135 @@ exports.createProduct = async (req, res) => {
 
 
 // Get All Products (sorted by position)
-// exports.getProducts = async (req, res) => {
-//   try {
-//     const products = await Product.find().sort({ position: 1 });
+exports.getProducts = async (req, res) => {
+  try {
+    const products = await Product.find().sort({ position: 1 });
 
-//     // Aggregate sum of quantity for each categoryId (string)
-//     const categoryCounts = await Product.aggregate([
-//       { $group: { _id: "$categoryId", count: { $sum: "$quantity" } } }
-//     ]);
-//     // Convert to a lookup object for quick access
-//     const categoryCountMap = {};
-//     categoryCounts.forEach(cat => {
-//       categoryCountMap[cat._id] = cat.count;
-//     });
+    // Aggregate sum of quantity for each categoryId (string)
+    const categoryCounts = await Product.aggregate([
+      { $group: { _id: "$categoryId", count: { $sum: "$quantity" } } }
+    ]);
+    // Convert to a lookup object for quick access
+    const categoryCountMap = {};
+    categoryCounts.forEach(cat => {
+      categoryCountMap[cat._id] = cat.count;
+    });
 
-//     const result = products.map(prod => {
-//       // Calculate discounted prices
-//       let discountedPrices = [];
-//       if (!isNaN(prod.discount) && prod.discount > 0) {
-//         discountedPrices = prod.price.map(p =>
-//           Number((p - (p * prod.discount / 100)).toFixed(3))
-//         );
-//       } else {
-//         discountedPrices = [...prod.price];
-//       }
+    const result = products.map(prod => {
+      // Calculate discounted prices
+      let discountedPrices = [];
+      if (!isNaN(prod.discount) && prod.discount > 0) {
+        discountedPrices = prod.price.map(p =>
+          Number((p - (p * prod.discount / 100)).toFixed(3))
+        );
+      } else {
+        discountedPrices = [...prod.price];
+      }
 
-//       return {
-//         _id: prod._id,
-//         productId: prod.productId,
-//         categoryId: prod.categoryId,
-//         name: prod.name,
-//         description: prod.description,
-//         modelNumbers: prod.modelNumbers,
-//         dimensions: prod.dimensions,
-//         colors: prod.colors,
-//         price: prod.price,
-//         discountedPrice: discountedPrices,
-//         discount: prod.discount,
-//         available: prod.available,
-//         position: prod.position,
-//         images: prod.images.map(img => ({
-//           url: img.url,
-//           public_id: img.public_id
-//         })),
-//         productQuantity: prod.quantity || 0, // Each product's quantity
-//         categoryTotalQuantity: categoryCountMap[prod.categoryId] || 0 // Total quantity for this category
-//       };
-//     });
+      return {
+        _id: prod._id,
+        productId: prod.productId,
+        categoryId: prod.categoryId,
+        name: prod.name,
+        description: prod.description,
+        modelNumbers: prod.modelNumbers,
+        dimensions: prod.dimensions,
+        colors: prod.colors,
+        price: prod.price,
+        discountedPrice: discountedPrices,
+        discount: prod.discount,
+        available: prod.available,
+        position: prod.position,
+        images: prod.images.map(img => ({
+          url: img.url,
+          public_id: img.public_id
+        })),
+        productQuantity: prod.quantity || 0, // Each product's quantity
+        categoryTotalQuantity: categoryCountMap[prod.categoryId] || 0 // Total quantity for this category
+      };
+    });
 
-//     res.status(200).json({ success: true, products: result });
-//   } catch (error) {
-//     res.status(500).json({ success: false, message: '❌ Failed to fetch products', error: error.message });
-//   }
-// };
+    res.status(200).json({ success: true, products: result });
+  } catch (error) {
+    res.status(500).json({ success: false, message: '❌ Failed to fetch products', error: error.message });
+  }
+};
 
 
-// // Get Product by Unique ID
-// exports.getProducts = async (req, res) => {
-//   try {
-//     const products = await Product.find().sort({ position: 1 });
+// Get Product by Unique ID
+exports.getProducts = async (req, res) => {
+  try {
+    const products = await Product.find().sort({ position: 1 });
 
-//     // Aggregate sum of quantity for each categoryId (string)
-//     const categoryCounts = await Product.aggregate([
-//       { $group: { _id: "$categoryId", count: { $sum: "$quantity" } } }
-//     ]);
+    // Aggregate sum of quantity for each categoryId (string)
+    const categoryCounts = await Product.aggregate([
+      { $group: { _id: "$categoryId", count: { $sum: "$quantity" } } }
+    ]);
 
-//     // Convert to a lookup object for quick access
-//     const categoryCountMap = {};
-//     categoryCounts.forEach(cat => {
-//       categoryCountMap[cat._id] = cat.count;
-//     });
+    // Convert to a lookup object for quick access
+    const categoryCountMap = {};
+    categoryCounts.forEach(cat => {
+      categoryCountMap[cat._id] = cat.count;
+    });
 
-//     const result = products.map(prod => {
-//       // Calculate global discounted prices
-//       let discountedPrices = [];
-//       if (!isNaN(prod.discount) && prod.discount > 0) {
-//         discountedPrices = prod.price.map(p =>
-//           Number((p - (p * prod.discount / 100)).toFixed(3))
-//         );
-//       } else {
-//         discountedPrices = [...prod.price];
-//       }
+    const result = products.map(prod => {
+      // Calculate global discounted prices
+      let discountedPrices = [];
+      if (!isNaN(prod.discount) && prod.discount > 0) {
+        discountedPrices = prod.price.map(p =>
+          Number((p - (p * prod.discount / 100)).toFixed(3))
+        );
+      } else {
+        discountedPrices = [...prod.price];
+      }
 
-//       // Apply discount to colorPrice items if applicable
-//       const discountedColorPrice = (prod.colorPrice || []).map(cp => {
-//         const discounted = !isNaN(prod.discount) && prod.discount > 0
-//           ? Number((cp.price - (cp.price * prod.discount / 100)).toFixed(3))
-//           : cp.price;
+      // Apply discount to colorPrice items if applicable
+      const discountedColorPrice = (prod.colorPrice || []).map(cp => {
+        const discounted = !isNaN(prod.discount) && prod.discount > 0
+          ? Number((cp.price - (cp.price * prod.discount / 100)).toFixed(3))
+          : cp.price;
 
-//         return {
-//           color: cp.color,
-//           originalPrice: cp.price,
-//           discountedPrice: discounted
-//         };
-//       });
+        return {
+          color: cp.color,
+          originalPrice: cp.price,
+          discountedPrice: discounted
+        };
+      });
 
-//       return {
-//         _id: prod._id,
-//         productId: prod.productId,
-//         categoryId: prod.categoryId,
-//         name: prod.name,
-//         description: prod.description,
-//         modelNumbers: prod.modelNumbers,
-//         dimensions: prod.dimensions,
-//         colors: prod.colors,
-//         price: prod.price,
-//         discountedPrice: discountedPrices,
-//         colorPrice: discountedColorPrice,
-//         colorImages: prod.colorImages || [],
-//         discount: prod.discount,
-//         available: prod.available,
-//         position: prod.position,
-//         images: prod.images.map(img => ({
-//           url: img.url,
-//           public_id: img.public_id
-//         })),
-//         productQuantity: prod.quantity || 0,
-//         categoryTotalQuantity: categoryCountMap[prod.categoryId] || 0
-//       };
-//     });
+      return {
+        _id: prod._id,
+        productId: prod.productId,
+        categoryId: prod.categoryId,
+        name: prod.name,
+        description: prod.description,
+        modelNumbers: prod.modelNumbers,
+        dimensions: prod.dimensions,
+        colors: prod.colors,
+        price: prod.price,
+        discountedPrice: discountedPrices,
+        colorPrice: discountedColorPrice,
+        colorImages: prod.colorImages || [],
+        discount: prod.discount,
+        available: prod.available,
+        position: prod.position,
+        images: prod.images.map(img => ({
+          url: img.url,
+          public_id: img.public_id
+        })),
+        productQuantity: prod.quantity || 0,
+        categoryTotalQuantity: categoryCountMap[prod.categoryId] || 0
+      };
+    });
 
-//     res.status(200).json({ success: true, products: result });
-//   } catch (error) {
-//     res.status(500).json({
-//       success: false,
-//       message: '❌ Failed to fetch products',
-//       error: error.message
-//     });
-//   }
-// };
+    res.status(200).json({ success: true, products: result });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: '❌ Failed to fetch products',
+      error: error.message
+    });
+  }
+};
 
 
 // Update Product (with image replacement)
