@@ -14,7 +14,7 @@ async function getServiceAccountKey() {
   return JSON.parse(payload);
 }
 
-// Upload buffer to GCS (image, pdf, etc.)
+// Upload buffer to GCS and make it public
 async function uploadBufferToGCS(buffer, fileName, folder = 'products', contentType = 'image/jpeg') {
   const serviceAccountKey = await getServiceAccountKey();
 
@@ -35,9 +35,14 @@ async function uploadBufferToGCS(buffer, fileName, folder = 'products', contentT
 
     stream.on('error', reject);
 
-    stream.on('finish', () => {
-      const publicUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
-      resolve({ url: publicUrl, public_id: blob.name });
+    stream.on('finish', async () => {
+      try {
+        await blob.makePublic(); // ✅ Ensure public access
+        const publicUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
+        resolve({ url: publicUrl, public_id: blob.name });
+      } catch (error) {
+        reject(new Error(`Failed to make file public: ${error.message}`));
+      }
     });
 
     stream.end(buffer);
