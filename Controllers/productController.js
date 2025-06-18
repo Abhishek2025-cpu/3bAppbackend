@@ -1,7 +1,6 @@
 const generateProductPDFBuffer = require('../utils/generateProductPDF');
 const generateQRCodeBase64 = require('../utils/generateQRCode');
-
-const path = require('path'); 
+const path = require('path');
 
 const Product = require('../models/Product');
 const Category = require('../models/Category');
@@ -21,117 +20,82 @@ exports.createProduct = async (req, res) => {
       discount,
       available,
       quantity,
-      position,
-      colorPrice // expecting a JSON string
+      position
     } = req.body;
 
-    // if (!productId || !categoryId || !name || !price) {
-    //   return res.status(400).json({ success: false, message: '❌ Required fields missing' });
-    // }
+    const sanitize = val => typeof val === 'string' ? val.trim() : val;
 
-    const category = await Category.findOne({ categoryId });
+    const category = await Category.findOne({ categoryId: sanitize(categoryId) });
     if (!category) {
       return res.status(400).json({ success: false, message: '❌ Invalid categoryId' });
     }
 
     const imageFiles = req.files?.images || [];
-    const colorImages = req.files?.colorImages || [];
 
-    // ✅ File size validation (limit: 100MB)
+    // ✅ Validate file size (max 100MB)
     const limitMB = 100;
-    for (const file of [...imageFiles, ...colorImages]) {
+    for (const file of imageFiles) {
       if (file.size > limitMB * 1024 * 1024) {
         return res.status(400).json({
           success: false,
-          message: `❌ File size exceeds ${limitMB}MB limit: ${file.originalname}`
+          message: `❌ File size exceeds ${limitMB}MB: ${file.originalname}`
         });
       }
     }
 
-    // Upload main product images to GCS
+    // ✅ Upload product images
     const uploadedImages = await Promise.all(
       imageFiles.map(file =>
         uploadBufferToGCS(file.buffer, file.originalname, 'products')
       )
     );
 
-    // Price processing
-    const priceArr = price.split(',').map(p => Number(p));
-    const discountValue = Number(discount) || 0;
+    // ✅ Parse and compute prices
+    const priceArr = sanitize(price).split(',').map(p => Number(p));
+    const discountValue = Number(sanitize(discount)) || 0;
     const discountedPrices = priceArr.map(p =>
       Number((p - (p * discountValue / 100)).toFixed(2))
     );
 
-    // Process colorPrice JSON
-    let parsedColorPrice = [];
-    let discountedColorPrice = [];
-
-    if (colorPrice) {
-      const colorPriceArr = JSON.parse(colorPrice);
-
-      for (let i = 0; i < colorPriceArr.length; i++) {
-        const { color, price } = colorPriceArr[i];
-        let image = null;
-
-        if (colorImages && colorImages[i]) {
-          image = await uploadBufferToGCS(colorImages[i].buffer, colorImages[i].originalname, 'color-images');
-        }
-
-        parsedColorPrice.push({ color, price: Number(price), image });
-        discountedColorPrice.push({
-          color,
-          price: Number((price - (price * discountValue / 100)).toFixed(2)),
-          image
-        });
-      }
-    }
-
-    // Create and save the product
     const newProduct = new Product({
-      productId,
+      productId: sanitize(productId),
       categoryId: category._id,
-      name,
-      description,
-      modelNumbers: modelNumbers ? modelNumbers.split(',') : [],
-      dimensions: dimensions ? dimensions.split(',') : [],
-      colors: colors ? colors.split(',') : [],
+      name: sanitize(name),
+      description: sanitize(description),
+      modelNumbers: modelNumbers ? sanitize(modelNumbers).split(',') : [],
+      dimensions: dimensions ? sanitize(dimensions).split(',') : [],
+      colors: colors ? sanitize(colors).split(',') : [],
       price: priceArr,
       discount: discountValue,
       discountedPrice: discountedPrices,
-available: typeof available === 'string'
-  ? available.trim().toLowerCase() === 'true'
-  : Boolean(available),
-
-      position: Number(position) || 0,
-      quantity: quantity !== undefined ? Number(quantity) : 0,
-      images: uploadedImages,
-      colorPrice: parsedColorPrice,
-      discountedColorPrice
+      available: typeof available === 'string'
+        ? sanitize(available).toLowerCase() === 'true'
+        : Boolean(available),
+      quantity: quantity !== undefined ? Number(sanitize(quantity)) : 0,
+      position: Number(sanitize(position)) || 0,
+      images: uploadedImages
     });
 
     await newProduct.save();
 
-    // ✅ Generate PDF buffer
+    // ✅ Generate and upload PDF
     const pdfBuffer = await generateProductPDFBuffer(newProduct);
-
-    // ✅ Upload PDF to GCS
     const pdfGcsResult = await uploadBufferToGCS(
       pdfBuffer,
       `product-pdfs/${newProduct._id}.pdf`,
       'application/pdf'
     );
 
-    // ✅ Generate QR code with PDF URL
+    // ✅ Generate QR code from PDF URL
     const qrCode = await generateQRCodeBase64(pdfGcsResult.url);
 
-    // ✅ Optionally update product with PDF and QR
-    newProduct.qrCode = qrCode; // base64 image
+    newProduct.qrCode = qrCode;
     newProduct.pdfUrl = pdfGcsResult.url;
     await newProduct.save();
 
     res.status(201).json({
       success: true,
-      message: '✅ Product created with QR code',
+      message: '✅ Product created with QR code and PDF',
       product: newProduct,
       qrCode,
       pdfUrl: pdfGcsResult.url
@@ -139,7 +103,11 @@ available: typeof available === 'string'
 
   } catch (error) {
     console.error('❌ Create product error:', error);
-    res.status(500).json({ success: false, message: '❌ Failed to create product', error: error.message });
+    res.status(500).json({
+      success: false,
+      message: '❌ Failed to create product',
+      error: error.message
+    });
   }
 };
 
