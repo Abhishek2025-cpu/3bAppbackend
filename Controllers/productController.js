@@ -98,7 +98,10 @@ exports.createProduct = async (req, res) => {
       price: priceArr,
       discount: discountValue,
       discountedPrice: discountedPrices,
-      available: available !== undefined ? available : true,
+available: typeof available === 'string'
+  ? available.trim().toLowerCase() === 'true'
+  : Boolean(available),
+
       position: Number(position) || 0,
       quantity: quantity !== undefined ? Number(quantity) : 0,
       images: uploadedImages,
