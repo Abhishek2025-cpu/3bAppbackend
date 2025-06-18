@@ -1,35 +1,49 @@
 const { Storage } = require('@google-cloud/storage');
-const path = require('path');
+const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 const { v4: uuidv4 } = require('uuid');
 
-// Setup GCS with service account key
-const storage = new Storage({
-  keyFilename: path.join(__dirname, '..', 'gcs-key.json'),
-});
+const client = new SecretManagerServiceClient();
+const bucketName = 'product-images-2025'; // your bucket
 
-const bucket = storage.bucket('product-images-2025'); // 🔁 Replace with your bucket name
+// Load service account key from Secret Manager
+async function getServiceAccountKey() {
+  const [version] = await client.accessSecretVersion({
+    name: 'projects/1067354145699/secrets/gcs-service-account-key/versions/latest',
+  });
+  const payload = version.payload.data.toString('utf8');
+  return JSON.parse(payload);
+}
 
-const uploadBufferToGCS = (buffer, fileName, folder = 'products') => {
+// Upload image buffer to GCS
+async function uploadBufferToGCS(buffer, fileName, folder = 'products') {
+  const serviceAccountKey = await getServiceAccountKey();
+
+  const storage = new Storage({
+    credentials: serviceAccountKey,
+  });
+
+  const bucket = storage.bucket(bucketName);
+  const uniqueFileName = `${folder}/${uuidv4()}-${fileName}`;
+  const blob = bucket.file(uniqueFileName);
+
   return new Promise((resolve, reject) => {
-    const uniqueFileName = `${folder}/${uuidv4()}-${fileName}`;
-    const blob = bucket.file(uniqueFileName);
-    const blobStream = blob.createWriteStream({
+    const stream = blob.createWriteStream({
       resumable: false,
       metadata: {
-        contentType: 'image/jpeg', // You can make this dynamic if needed
+        contentType: 'image/jpeg',
         cacheControl: 'public, max-age=31536000',
       },
     });
 
-    blobStream.on('error', reject);
+    stream.on('error', reject);
 
-    blobStream.on('finish', () => {
+    stream.on('finish', () => {
       const publicUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
       resolve({ url: publicUrl, public_id: blob.name });
     });
 
-    blobStream.end(buffer);
+    stream.end(buffer);
   });
-};
+}
 
 module.exports = { uploadBufferToGCS };
