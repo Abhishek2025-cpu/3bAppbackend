@@ -1,6 +1,5 @@
 const generateProductPDFBuffer = require('../utils/generateProductPDF');
-const generateQRCodeBase64 = require('../utils/generateQRCode');
-const QRCode = require('qrcode'); // ✅ Add this line
+const QRCode = require('qrcode'); // ✅ Actively required
 const path = require('path'); 
 
 const Product = require('../models/Product');
