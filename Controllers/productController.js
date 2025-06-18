@@ -1,11 +1,13 @@
 const generateProductPDFBuffer = require('../utils/generateProductPDF');
-const QRCode = require('qrcode'); // ✅ Actively required
-const path = require('path'); 
+const generateQRCodeBase64 = require('../utils/generateQRCode');
+const QRCode = require('qrcode');
+const path = require('path');
 
 const Product = require('../models/Product');
 const Category = require('../models/Category');
 const { uploadBufferToGCS } = require('../utils/gcsUploader');
 
+// Create Product
 exports.createProduct = async (req, res) => {
   try {
     const {
@@ -23,10 +25,6 @@ exports.createProduct = async (req, res) => {
       position,
       colorPrice // expecting a JSON string
     } = req.body;
-
-    // if (!productId || !categoryId || !name || !price) {
-    //   return res.status(400).json({ success: false, message: '❌ Required fields missing' });
-    // }
 
     const category = await Category.findOne({ categoryId });
     if (!category) {
@@ -67,7 +65,6 @@ exports.createProduct = async (req, res) => {
 
     if (colorPrice) {
       const colorPriceArr = JSON.parse(colorPrice);
-
       for (let i = 0; i < colorPriceArr.length; i++) {
         const { color, price } = colorPriceArr[i];
         let image = null;
@@ -85,73 +82,66 @@ exports.createProduct = async (req, res) => {
       }
     }
 
- const newProduct = new Product({
-  productId,
-  categoryId: category._id,
-  name,
-  description,
-  modelNumbers: modelNumbers ? modelNumbers.split(',') : [],
-  dimensions: dimensions ? dimensions.split(',') : [],
-  colors: colors ? colors.split(',') : [],
-  price: priceArr,
-  discount: discountValue,
-  discountedPrice: discountedPrices,
-  available: typeof available === 'string'
-    ? available.trim().toLowerCase() === 'true'
-    : Boolean(available),
-  position: Number(position) || 0,
-  quantity: quantity !== undefined ? Number(quantity) : 0,
-  images: uploadedImages,
-  colorPrice: parsedColorPrice,
-  discountedColorPrice
-});
+    // Create product object (before saving PDF/QR)
+    const newProduct = new Product({
+      productId,
+      categoryId: category._id,
+      name,
+      description,
+      modelNumbers: modelNumbers ? modelNumbers.split(',') : [],
+      dimensions: dimensions ? dimensions.split(',') : [],
+      colors: colors ? colors.split(',') : [],
+      price: priceArr,
+      discount: discountValue,
+      discountedPrice: discountedPrices,
+      available: typeof available === 'string' ? available.trim().toLowerCase() === 'true' : Boolean(available),
+      position: Number(position) || 0,
+      quantity: quantity !== undefined ? Number(quantity) : 0,
+      images: uploadedImages,
+      colorPrice: parsedColorPrice,
+      discountedColorPrice
+    });
 
+    await newProduct.save(); // Save first to get _id for filenames
 
+    // ✅ Generate PDF and upload to GCS
+    const pdfBuffer = await generateProductPDFBuffer(newProduct);
+    const pdfGcsResult = await uploadBufferToGCS(
+      pdfBuffer,
+      `product-pdfs/${newProduct._id}.pdf`,
+      'application/pdf'
+    );
+
+    // ✅ Generate QR Code buffer from PDF URL
+    const qrBuffer = await QRCode.toBuffer(pdfGcsResult.url, { type: 'png' });
+
+    // ✅ Upload QR Code to GCS
+    const qrUploadResult = await uploadBufferToGCS(
+      qrBuffer,
+      `product-qrcodes/${newProduct._id}.png`,
+      'image/png'
+    );
+
+    // ✅ Save URLs to product
+    newProduct.pdfUrl = pdfGcsResult.url;
+    newProduct.qrCodeUrl = qrUploadResult.url;
     await newProduct.save();
 
-// Generate QR code as PNG buffer
-const qrBuffer = await QRCode.toBuffer(newProduct.pdfUrl, { type: 'png' });
-console.log("QR Code Buffer Generated:", qrBuffer);
-
-// Upload QR code PNG to GCS
-const qrUploadResult = await uploadBufferToGCS(
-  qrBuffer,
-  `product-qrcodes/${newProduct._id}.png`,
-  'image/png'
-);
-console.log("QR Code Upload Result:", qrUploadResult);
-
-// Save PDF and QR code URLs
-newProduct.pdfUrl = pdfGcsResult.url;
-newProduct.qrCodeUrl = qrUploadResult.url;
-
-try {
-  await newProduct.save();
-  console.log("Product saved with QR Code URL:", newProduct.qrCodeUrl);
-} catch (error) {
-  console.error("Error saving product:", error);
-}
-
-// Send response
-res.status(201).json({
-  success: true,
-  message: '✅ Product created with QR code',
-  product: newProduct,
-  qrCodeUrl: newProduct.qrCodeUrl, // Ensure this is the correct field
-  pdfUrl: newProduct.pdfUrl
-});
-
+    // ✅ Send response
+    res.status(201).json({
+      success: true,
+      message: '✅ Product created with QR code and PDF',
+      product: newProduct,
+      qrCodeUrl: newProduct.qrCodeUrl,
+      pdfUrl: newProduct.pdfUrl
+    });
   } catch (error) {
     console.error('❌ Create product error:', error);
     res.status(500).json({ success: false, message: '❌ Failed to create product', error: error.message });
   }
 };
 
-
-
-
-
-// Get All Products (sorted by position)
+// Get All Products
 exports.getProducts = async (req, res) => {
   try {
     const products = await Product.find().sort({ position: 1 });
@@ -176,7 +166,7 @@ exports.getProducts = async (req, res) => {
         discountedPrices = [...prod.price];
       }
 
-      // Apply discount to colorPrice items if applicable
+      // Apply discount to colorPrice items
       const discountedColorPrice = (prod.colorPrice || []).map(cp => {
         const discounted = !isNaN(prod.discount) && prod.discount > 0
           ? Number((cp.price - (cp.price * prod.discount / 100)).toFixed(3))
@@ -185,7 +175,8 @@ exports.getProducts = async (req, res) => {
         return {
           color: cp.color,
           originalPrice: cp.price,
-          discountedPrice: discounted
+          discountedPrice: discounted,
+          image: cp.image || null
         };
       });
 
@@ -201,7 +192,6 @@ exports.getProducts = async (req, res) => {
         price: prod.price,
         discountedPrice: discountedPrices,
         colorPrice: discountedColorPrice,
-        colorImages: prod.colorImages || [],
         discount: prod.discount,
         available: prod.available,
         position: prod.position,
@@ -211,8 +201,6 @@ exports.getProducts = async (req, res) => {
         })),
         productQuantity: prod.quantity || 0,
         categoryTotalQuantity: categoryCountMap[prod.categoryId] || 0,
-
-        // ✅ Include PDF and QR code URLs
         pdfUrl: prod.pdfUrl || null,
         qrCodeUrl: prod.qrCodeUrl || null
       };
