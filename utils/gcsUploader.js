@@ -5,7 +5,6 @@ const { v4: uuidv4 } = require('uuid');
 const client = new SecretManagerServiceClient();
 const bucketName = 'product-images-2025';
 
-// Load service account key from Secret Manager
 async function getServiceAccountKey() {
   const [version] = await client.accessSecretVersion({
     name: 'projects/1067354145699/secrets/gcs-service-account-key/versions/latest',
@@ -14,7 +13,6 @@ async function getServiceAccountKey() {
   return JSON.parse(payload);
 }
 
-// Upload buffer to GCS (image, pdf, etc.)
 async function uploadBufferToGCS(buffer, fileName, folder = 'products', contentType = 'image/jpeg') {
   const serviceAccountKey = await getServiceAccountKey();
 
@@ -24,24 +22,25 @@ async function uploadBufferToGCS(buffer, fileName, folder = 'products', contentT
   const uniqueFileName = `${folder}/${uuidv4()}-${fileName}`;
   const blob = bucket.file(uniqueFileName);
 
-  return new Promise((resolve, reject) => {
-    const stream = blob.createWriteStream({
-      resumable: false,
-      metadata: {
-        contentType,
-        cacheControl: 'public, max-age=31536000',
-      },
-    });
-
-    stream.on('error', reject);
-
-    stream.on('finish', () => {
-      const publicUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
-      resolve({ url: publicUrl, public_id: blob.name });
-    });
-
-    stream.end(buffer);
+  await blob.save(buffer, {
+    metadata: {
+      contentType,
+      cacheControl: 'public, max-age=31536000',
+    },
+    resumable: false,
   });
+
+  // Generate a signed URL (valid for 1 year)
+  const [url] = await blob.getSignedUrl({
+    version: 'v4',
+    action: 'read',
+    expires: Date.now() + 365 * 24 * 60 * 60 * 1000, // 1 year
+  });
+
+  return {
+    url,
+    public_id: blob.name,
+  };
 }
 
 module.exports = { uploadBufferToGCS };
