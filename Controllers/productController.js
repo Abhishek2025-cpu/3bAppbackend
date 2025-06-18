@@ -25,9 +25,9 @@ exports.createProduct = async (req, res) => {
       colorPrice // expecting a JSON string
     } = req.body;
 
-    if (!productId || !categoryId || !name || !price) {
-      return res.status(400).json({ success: false, message: '❌ Required fields missing' });
-    }
+    // if (!productId || !categoryId || !name || !price) {
+    //   return res.status(400).json({ success: false, message: '❌ Required fields missing' });
+    // }
 
     const category = await Category.findOne({ categoryId });
     if (!category) {
