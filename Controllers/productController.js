@@ -86,25 +86,27 @@ exports.createProduct = async (req, res) => {
       }
     }
 
-    // Create and save the product
-    const newProduct = new Product({
-      productId,
-      categoryId: category._id,
-      name,
-      description,
-      modelNumbers: modelNumbers ? modelNumbers.split(',') : [],
-      dimensions: dimensions ? dimensions.split(',') : [],
-      colors: colors ? colors.split(',') : [],
-      price: priceArr,
-      discount: discountValue,
-      discountedPrice: discountedPrices,
-      available: available !== undefined ? available : true,
-      position: Number(position) || 0,
-      quantity: quantity !== undefined ? Number(quantity) : 0,
-      images: uploadedImages,
-      colorPrice: parsedColorPrice,
-      discountedColorPrice
-    });
+ const newProduct = new Product({
+  productId,
+  categoryId: category._id,
+  name,
+  description,
+  modelNumbers: modelNumbers ? modelNumbers.split(',') : [],
+  dimensions: dimensions ? dimensions.split(',') : [],
+  colors: colors ? colors.split(',') : [],
+  price: priceArr,
+  discount: discountValue,
+  discountedPrice: discountedPrices,
+  available: typeof available === 'string'
+    ? available.trim().toLowerCase() === 'true'
+    : Boolean(available),
+  position: Number(position) || 0,
+  quantity: quantity !== undefined ? Number(quantity) : 0,
+  images: uploadedImages,
+  colorPrice: parsedColorPrice,
+  discountedColorPrice
+});
+
 
     await newProduct.save();
 
