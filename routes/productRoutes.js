@@ -1,9 +1,10 @@
 // routes/productRoutes.js
 const express = require('express');
 const router = express.Router();
+const multer = require('multer'); // ✅ Required for error checking
+
 const productController = require('../Controllers/productController');
 const { uploadProduct } = require('../middleware/upload');
-
 
 router.post('/add-products', (req, res, next) => {
   uploadProduct.fields([
@@ -17,15 +18,17 @@ router.post('/add-products', (req, res, next) => {
   });
 }, productController.createProduct);
 
-
 router.get('/get-products', productController.getProducts);
 router.get('/get-product/:productId', productController.getProductById);
-router.put('/update-product/:productId', uploadProduct.fields([
-  { name: 'images', maxCount: 10 },
- 
-]), productController.updateProduct);
+
+router.put('/update-product/:productId',
+  uploadProduct.fields([
+    { name: 'images', maxCount: 10 },
+  ]),
+  productController.updateProduct
+);
+
 router.put('/toggle-product/:productId', productController.toggleProductAvailability);
 router.delete('/delete-product/:productId', productController.deleteProduct);
-
 
 module.exports = router;
