@@ -32,12 +32,12 @@ const productSchema = new mongoose.Schema({
       public_id: String
     }
   }],
+  pdfUrl: { type: String },
+qrCodeUrl: { type: String },
+
   available: { type: Boolean, default: true },
   quantity: { type: Number, required: true, default: 0 },
   position: { type: Number, default: 0 },
-  qrCode: String, 
-pdfUrl: String   
-
 },
  { timestamps: true });
 
