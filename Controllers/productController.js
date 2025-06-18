@@ -151,11 +151,11 @@ exports.getProducts = async (req, res) => {
   try {
     const products = await Product.find().sort({ position: 1 });
 
-    // Aggregate sum of quantity for each categoryId (string)
+    // Aggregate sum of quantity for each categoryId
     const categoryCounts = await Product.aggregate([
       { $group: { _id: "$categoryId", count: { $sum: "$quantity" } } }
     ]);
-    // Convert to a lookup object for quick access
+
     const categoryCountMap = {};
     categoryCounts.forEach(cat => {
       categoryCountMap[cat._id] = cat.count;
@@ -190,14 +190,20 @@ exports.getProducts = async (req, res) => {
           url: img.url,
           public_id: img.public_id
         })),
-        productQuantity: prod.quantity || 0, // Each product's quantity
-        categoryTotalQuantity: categoryCountMap[prod.categoryId] || 0 // Total quantity for this category
+        pdfUrl: prod.pdfUrl || null,
+        qrCodeUrl: prod.qrCodeUrl || null,
+        productQuantity: prod.quantity || 0,
+        categoryTotalQuantity: categoryCountMap[prod.categoryId] || 0
       };
     });
 
     res.status(200).json({ success: true, products: result });
   } catch (error) {
-    res.status(500).json({ success: false, message: '❌ Failed to fetch products', error: error.message });
+    res.status(500).json({
+      success: false,
+      message: '❌ Failed to fetch products',
+      error: error.message
+    });
   }
 };
 
