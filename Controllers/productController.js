@@ -132,7 +132,7 @@ await newProduct.save();
       success: true,
       message: '✅ Product created with QR code',
       product: newProduct,
-      // qrCode,
+       qrCode,
       pdfUrl: pdfGcsResult.url
     });
 
