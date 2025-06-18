@@ -16,11 +16,29 @@ const productSchema = new mongoose.Schema({
   price: { type: [Number], required: true },
   discount: { type: Number, default: 0 },
   discountedPrice: [Number],
+  colorPrice: [{
+    color: String,
+    price: Number,
+    image: {
+      url: String,
+      public_id: String
+    }
+  }],
+  discountedColorPrice: [{
+    color: String,
+    price: Number,
+    image: {
+      url: String,
+      public_id: String
+    }
+  }],
   available: { type: Boolean, default: true },
   quantity: { type: Number, required: true, default: 0 },
   position: { type: Number, default: 0 },
-  qrCode: String,
-  pdfUrl: String
-}, { timestamps: true });
+  qrCode: String, 
+pdfUrl: String   
+
+},
+ { timestamps: true });
 
 module.exports = mongoose.model('Product', productSchema);
