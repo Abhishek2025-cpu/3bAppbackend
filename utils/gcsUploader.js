@@ -3,7 +3,7 @@ const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 const { v4: uuidv4 } = require('uuid');
 
 const client = new SecretManagerServiceClient();
-const bucketName = 'product-images-2025'; // your bucket
+const bucketName = 'product-images-2025';
 
 // Load service account key from Secret Manager
 async function getServiceAccountKey() {
@@ -14,15 +14,13 @@ async function getServiceAccountKey() {
   return JSON.parse(payload);
 }
 
-// Upload image buffer to GCS
-async function uploadBufferToGCS(buffer, fileName, folder = 'products') {
+// Upload buffer to GCS (image, pdf, etc.)
+async function uploadBufferToGCS(buffer, fileName, folder = 'products', contentType = 'image/jpeg') {
   const serviceAccountKey = await getServiceAccountKey();
 
-  const storage = new Storage({
-    credentials: serviceAccountKey,
-  });
-
+  const storage = new Storage({ credentials: serviceAccountKey });
   const bucket = storage.bucket(bucketName);
+
   const uniqueFileName = `${folder}/${uuidv4()}-${fileName}`;
   const blob = bucket.file(uniqueFileName);
 
@@ -30,7 +28,7 @@ async function uploadBufferToGCS(buffer, fileName, folder = 'products') {
     const stream = blob.createWriteStream({
       resumable: false,
       metadata: {
-        contentType: 'image/jpeg',
+        contentType,
         cacheControl: 'public, max-age=31536000',
       },
     });
