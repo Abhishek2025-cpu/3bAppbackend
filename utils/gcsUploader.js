@@ -43,6 +43,5 @@ async function uploadBufferToGCS(buffer, fileName, folder = 'products', contentT
     public_id: blob.name,
   };
 }
-
 module.exports = { uploadBufferToGCS };
-//main branchgit push origin main
+
