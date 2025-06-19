@@ -22,6 +22,7 @@ async function uploadBufferToGCS(buffer, fileName, folder = 'products', contentT
   const uniqueFileName = `${folder}/${uuidv4()}-${fileName}`;
   const blob = bucket.file(uniqueFileName);
 
+  // ⛔️ Do NOT call blob.makePublic() or blob.acl.* here — not allowed under UBLA
   await blob.save(buffer, {
     metadata: {
       contentType,
@@ -30,7 +31,7 @@ async function uploadBufferToGCS(buffer, fileName, folder = 'products', contentT
     resumable: false,
   });
 
-  // Generate a signed URL (valid for 1 year)
+  // ✅ Safe under UBLA: Generate a signed URL for read access
   const [url] = await blob.getSignedUrl({
     version: 'v4',
     action: 'read',
