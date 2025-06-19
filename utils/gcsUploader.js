@@ -32,11 +32,11 @@ async function uploadBufferToGCS(buffer, fileName, folder = 'products', contentT
   });
 
   // ✅ Safe under UBLA: Generate a signed URL for read access
-  const [url] = await blob.getSignedUrl({
-    version: 'v4',
-    action: 'read',
-    expires: Date.now() + 365 * 24 * 60 * 60 * 1000, // 1 year
-  });
+const [url] = await blob.getSignedUrl({
+  version: 'v4',
+  action: 'read',
+  expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // ✅ 7 days in milliseconds
+});
 
   return {
     url,
