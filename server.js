@@ -22,7 +22,7 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: 'https://server1.pearl-developer.com', // allow only this origin
+  origin: true, // allows all origins
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 }));
