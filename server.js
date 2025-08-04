@@ -22,7 +22,7 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: true, // allows all origins
+  origin: '*', // allows all origins
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 }));
